@@ -1,0 +1,243 @@
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    ScrollView,
+    Modal,
+} from 'react-native';
+import {
+    Download,
+    Trash,
+    History,
+    X,
+    FileText,
+    Calendar,
+} from 'lucide-react-native';
+import { styles } from '../styles/globalStyles';
+import { COLORS } from '../constants/colors';
+
+const HistoryScreen = ({ data, onBack, onDelete, onView, onExport }) => {
+    const [exportModalVisible, setExportModalVisible] = useState(false);
+    const [dateSelectorVisible, setDateSelectorVisible] = useState(false);
+
+    const getStatusColor = (status) => {
+        if (status === 'GROUNDED') return COLORS.red;
+        if (status === 'MONITOR') return COLORS.yellow;
+        return COLORS.green;
+    };
+
+    const getStatusText = (status) => {
+        if (status === 'GROUNDED') return 'UNSAFE - GROUNDED';
+        if (status === 'MONITOR') return 'SAFE - MONITOR';
+        return 'CLEAN - OPERATIONAL';
+    };
+
+    const getAvailableDates = () => {
+        const dates = data.map((item) => item.timestamp.split(',')[0].trim());
+        return [...new Set(dates)];
+    };
+    const availableDates = getAvailableDates();
+
+    const handleDateSelect = (dateStr) => {
+        const filteredList = data.filter((item) =>
+            item.timestamp.includes(dateStr)
+        );
+        setDateSelectorVisible(false);
+        setExportModalVisible(false);
+        setTimeout(() => {
+            onExport(filteredList);
+        }, 500);
+    };
+
+    return (
+        <View style={styles.screenBase}>
+            <View style={styles.header}>
+                <View>
+                    <Text style={styles.headerSub}>INSPECTION LOGS</Text>
+                    <Text style={styles.headerTitle}>All Activity</Text>
+                </View>
+
+                <TouchableOpacity
+                    style={{
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        padding: 10,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: 'rgba(37, 99, 235, 0.3)',
+                    }}
+                    onPress={() => setExportModalVisible(true)}>
+                    <Download size={20} color={COLORS.blue} />
+                </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
+                {data.length === 0 ? (
+                    <View style={{ alignItems: 'center', marginTop: 50, opacity: 0.5 }}>
+                        <History size={48} color={COLORS.gray} />
+                        <Text style={{ color: COLORS.gray, marginTop: 10 }}>
+                            No inspections recorded yet.
+                        </Text>
+                    </View>
+                ) : (
+                    data.map((item) => (
+                        <View
+                            key={item.id}
+                            style={[styles.historyItem, { paddingRight: 10 }]}>
+                            <TouchableOpacity
+                                style={{ flex: 1 }}
+                                onPress={() => onView(item)}>
+                                <View>
+                                    <Text style={styles.historyTitle}>{item.truck}</Text>
+                                    <Text style={styles.historyDate}>{item.timestamp}</Text>
+                                    <Text
+                                        style={{
+                                            color: getStatusColor(item.status),
+                                            fontSize: 10,
+                                            fontWeight: 'bold',
+                                            marginTop: 4,
+                                        }}>
+                                        {getStatusText(item.status)}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => onDelete(item.id)}
+                                style={{ padding: 10 }}>
+                                <Trash size={20} color={COLORS.red} />
+                            </TouchableOpacity>
+                        </View>
+                    ))
+                )}
+            </ScrollView>
+
+            {/* EXPORT MODAL */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={exportModalVisible}
+                onRequestClose={() => setExportModalVisible(false)}>
+                <View style={styles.modalOverlay}>
+                    <View
+                        style={[styles.modalContent, { height: 'auto', maxHeight: '50%' }]}>
+                        <View style={styles.modalHeader}>
+                            <Text
+                                style={{
+                                    color: COLORS.white,
+                                    fontWeight: 'bold',
+                                    fontSize: 18,
+                                }}>
+                                EXPORT OPTIONS
+                            </Text>
+                            <TouchableOpacity onPress={() => setExportModalVisible(false)}>
+                                <X size={24} color={COLORS.white} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={{ gap: 15, marginBottom: 30 }}>
+                            <Text style={{ color: COLORS.gray, marginBottom: 5 }}>
+                                Select export format:
+                            </Text>
+                            <TouchableOpacity
+                                style={styles.actionBtn}
+                                onPress={() => {
+                                    setExportModalVisible(false);
+                                    setTimeout(() => onExport(data), 500);
+                                }}>
+                                <View>
+                                    <Text style={styles.actionBtnTitle}>Download Full Log</Text>
+                                    <Text style={styles.actionBtnSub}>All dates combined</Text>
+                                </View>
+                                <FileText size={24} color={COLORS.white} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.actionBtn, { backgroundColor: COLORS.tealDark }]}
+                                onPress={() => {
+                                    setExportModalVisible(false);
+                                    setTimeout(() => setDateSelectorVisible(true), 300);
+                                }}>
+                                <View>
+                                    <Text style={styles.actionBtnTitle}>
+                                        Select Specific Date
+                                    </Text>
+                                    <Text style={styles.actionBtnSub}>Pick from history</Text>
+                                </View>
+                                <Calendar size={24} color={COLORS.white} />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* DATE SELECTOR MODAL */}
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={dateSelectorVisible}
+                onRequestClose={() => setDateSelectorVisible(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { height: '60%' }]}>
+                        <View style={styles.modalHeader}>
+                            <Text
+                                style={{
+                                    color: COLORS.white,
+                                    fontWeight: 'bold',
+                                    fontSize: 18,
+                                }}>
+                                SELECT DATE
+                            </Text>
+                            <TouchableOpacity onPress={() => setDateSelectorVisible(false)}>
+                                <X size={24} color={COLORS.white} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={{ color: COLORS.gray, marginBottom: 20 }}>
+                            Tap a date to download its report:
+                        </Text>
+
+                        <ScrollView>
+                            {availableDates.length === 0 ? (
+                                <Text style={{ color: COLORS.red, textAlign: 'center' }}>
+                                    No dates found in history.
+                                </Text>
+                            ) : (
+                                availableDates.map((date, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={{
+                                            padding: 20,
+                                            backgroundColor: '#2a2a2a',
+                                            marginBottom: 10,
+                                            borderRadius: 12,
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            borderWidth: 1,
+                                            borderColor: '#444',
+                                        }}
+                                        onPress={() => handleDateSelect(date)}>
+                                        <Calendar
+                                            size={20}
+                                            color={COLORS.tealLight}
+                                            style={{ marginRight: 15 }}
+                                        />
+                                        <Text
+                                            style={{
+                                                color: COLORS.white,
+                                                fontSize: 18,
+                                                fontWeight: 'bold',
+                                            }}>
+                                            {date}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))
+                            )}
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+        </View>
+    );
+};
+
+export default HistoryScreen;
