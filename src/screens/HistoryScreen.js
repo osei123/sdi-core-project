@@ -15,16 +15,17 @@ import {
     Calendar,
 } from 'lucide-react-native';
 import { styles } from '../styles/globalStyles';
-import { COLORS } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 
 const HistoryScreen = ({ data, onBack, onDelete, onView, onExport }) => {
+    const { colors, isDarkMode } = useTheme();
     const [exportModalVisible, setExportModalVisible] = useState(false);
     const [dateSelectorVisible, setDateSelectorVisible] = useState(false);
 
     const getStatusColor = (status) => {
-        if (status === 'GROUNDED') return COLORS.red;
-        if (status === 'MONITOR') return COLORS.yellow;
-        return COLORS.green;
+        if (status === 'GROUNDED') return colors.red;
+        if (status === 'MONITOR') return colors.yellow;
+        return colors.green;
     };
 
     const getStatusText = (status) => {
@@ -51,31 +52,31 @@ const HistoryScreen = ({ data, onBack, onDelete, onView, onExport }) => {
     };
 
     return (
-        <View style={styles.screenBase}>
-            <View style={styles.header}>
+        <View style={[styles.screenBase, { backgroundColor: colors.bgPrimary }]}>
+            <View style={[styles.header, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
                 <View>
-                    <Text style={styles.headerSub}>INSPECTION LOGS</Text>
-                    <Text style={styles.headerTitle}>All Activity</Text>
+                    <Text style={[styles.headerSub, { color: colors.textMuted }]}>INSPECTION LOGS</Text>
+                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>All Activity</Text>
                 </View>
 
                 <TouchableOpacity
                     style={{
-                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        backgroundColor: `${colors.blue}15`,
                         padding: 10,
                         borderRadius: 8,
                         borderWidth: 1,
-                        borderColor: 'rgba(37, 99, 235, 0.3)',
+                        borderColor: `${colors.blue}50`,
                     }}
                     onPress={() => setExportModalVisible(true)}>
-                    <Download size={20} color={COLORS.blue} />
+                    <Download size={20} color={colors.blue} />
                 </TouchableOpacity>
             </View>
 
             <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
                 {data.length === 0 ? (
                     <View style={{ alignItems: 'center', marginTop: 50, opacity: 0.5 }}>
-                        <History size={48} color={COLORS.gray} />
-                        <Text style={{ color: COLORS.gray, marginTop: 10 }}>
+                        <History size={48} color={colors.textMuted} />
+                        <Text style={{ color: colors.textMuted, marginTop: 10 }}>
                             No inspections recorded yet.
                         </Text>
                     </View>
@@ -83,13 +84,13 @@ const HistoryScreen = ({ data, onBack, onDelete, onView, onExport }) => {
                     data.map((item) => (
                         <View
                             key={item.id}
-                            style={[styles.historyItem, { paddingRight: 10 }]}>
+                            style={[styles.historyItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border, paddingRight: 10 }]}>
                             <TouchableOpacity
                                 style={{ flex: 1 }}
                                 onPress={() => onView(item)}>
                                 <View>
-                                    <Text style={styles.historyTitle}>{item.truck}</Text>
-                                    <Text style={styles.historyDate}>{item.timestamp}</Text>
+                                    <Text style={[styles.historyTitle, { color: colors.textPrimary }]}>{item.truck}</Text>
+                                    <Text style={[styles.historyDate, { color: colors.textMuted }]}>{item.timestamp}</Text>
                                     <Text
                                         style={{
                                             color: getStatusColor(item.status),
@@ -104,7 +105,7 @@ const HistoryScreen = ({ data, onBack, onDelete, onView, onExport }) => {
                             <TouchableOpacity
                                 onPress={() => onDelete(item.id)}
                                 style={{ padding: 10 }}>
-                                <Trash size={20} color={COLORS.red} />
+                                <Trash size={20} color={colors.red} />
                             </TouchableOpacity>
                         </View>
                     ))
@@ -119,27 +120,27 @@ const HistoryScreen = ({ data, onBack, onDelete, onView, onExport }) => {
                 onRequestClose={() => setExportModalVisible(false)}>
                 <View style={styles.modalOverlay}>
                     <View
-                        style={[styles.modalContent, { height: 'auto', maxHeight: '50%' }]}>
+                        style={[styles.modalContent, { height: 'auto', maxHeight: '50%', backgroundColor: colors.bgSecondary }]}>
                         <View style={styles.modalHeader}>
                             <Text
                                 style={{
-                                    color: COLORS.white,
+                                    color: colors.textPrimary,
                                     fontWeight: 'bold',
                                     fontSize: 18,
                                 }}>
                                 EXPORT OPTIONS
                             </Text>
                             <TouchableOpacity onPress={() => setExportModalVisible(false)}>
-                                <X size={24} color={COLORS.white} />
+                                <X size={24} color={colors.textPrimary} />
                             </TouchableOpacity>
                         </View>
 
                         <View style={{ gap: 15, marginBottom: 30 }}>
-                            <Text style={{ color: COLORS.gray, marginBottom: 5 }}>
+                            <Text style={{ color: colors.textSecondary, marginBottom: 5 }}>
                                 Select export format:
                             </Text>
                             <TouchableOpacity
-                                style={styles.actionBtn}
+                                style={[styles.actionBtn, { backgroundColor: colors.blue }]}
                                 onPress={() => {
                                     setExportModalVisible(false);
                                     setTimeout(() => onExport(data), 500);
@@ -148,11 +149,11 @@ const HistoryScreen = ({ data, onBack, onDelete, onView, onExport }) => {
                                     <Text style={styles.actionBtnTitle}>Download Full Log</Text>
                                     <Text style={styles.actionBtnSub}>All dates combined</Text>
                                 </View>
-                                <FileText size={24} color={COLORS.white} />
+                                <FileText size={24} color="#fff" />
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                style={[styles.actionBtn, { backgroundColor: COLORS.tealDark }]}
+                                style={[styles.actionBtn, { backgroundColor: colors.tealDark }]}
                                 onPress={() => {
                                     setExportModalVisible(false);
                                     setTimeout(() => setDateSelectorVisible(true), 300);
@@ -163,7 +164,7 @@ const HistoryScreen = ({ data, onBack, onDelete, onView, onExport }) => {
                                     </Text>
                                     <Text style={styles.actionBtnSub}>Pick from history</Text>
                                 </View>
-                                <Calendar size={24} color={COLORS.white} />
+                                <Calendar size={24} color="#fff" />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -177,28 +178,28 @@ const HistoryScreen = ({ data, onBack, onDelete, onView, onExport }) => {
                 visible={dateSelectorVisible}
                 onRequestClose={() => setDateSelectorVisible(false)}>
                 <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { height: '60%' }]}>
+                    <View style={[styles.modalContent, { height: '60%', backgroundColor: colors.bgSecondary }]}>
                         <View style={styles.modalHeader}>
                             <Text
                                 style={{
-                                    color: COLORS.white,
+                                    color: colors.textPrimary,
                                     fontWeight: 'bold',
                                     fontSize: 18,
                                 }}>
                                 SELECT DATE
                             </Text>
                             <TouchableOpacity onPress={() => setDateSelectorVisible(false)}>
-                                <X size={24} color={COLORS.white} />
+                                <X size={24} color={colors.textPrimary} />
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={{ color: COLORS.gray, marginBottom: 20 }}>
+                        <Text style={{ color: colors.textSecondary, marginBottom: 20 }}>
                             Tap a date to download its report:
                         </Text>
 
                         <ScrollView>
                             {availableDates.length === 0 ? (
-                                <Text style={{ color: COLORS.red, textAlign: 'center' }}>
+                                <Text style={{ color: colors.red, textAlign: 'center' }}>
                                     No dates found in history.
                                 </Text>
                             ) : (
@@ -207,23 +208,23 @@ const HistoryScreen = ({ data, onBack, onDelete, onView, onExport }) => {
                                         key={index}
                                         style={{
                                             padding: 20,
-                                            backgroundColor: '#2a2a2a',
+                                            backgroundColor: colors.bgTertiary,
                                             marginBottom: 10,
                                             borderRadius: 12,
                                             flexDirection: 'row',
                                             alignItems: 'center',
                                             borderWidth: 1,
-                                            borderColor: '#444',
+                                            borderColor: colors.border,
                                         }}
                                         onPress={() => handleDateSelect(date)}>
                                         <Calendar
                                             size={20}
-                                            color={COLORS.tealLight}
+                                            color={colors.tealLight}
                                             style={{ marginRight: 15 }}
                                         />
                                         <Text
                                             style={{
-                                                color: COLORS.white,
+                                                color: colors.textPrimary,
                                                 fontSize: 18,
                                                 fontWeight: 'bold',
                                             }}>

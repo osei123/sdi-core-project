@@ -10,7 +10,7 @@ import {
     Platform,
 } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { Mail, Lock, Shield, Fingerprint } from 'lucide-react-native';
+import { Mail, Lock, Shield, Fingerprint, Eye, EyeOff } from 'lucide-react-native';
 import { styles } from '../styles/globalStyles';
 import { COLORS } from '../constants/colors';
 
@@ -23,6 +23,7 @@ const AuthScreen = ({
     // Manager toggle removed - role is determined by backend profile
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isBiometricSupported, setIsBiometricSupported] = useState(false);
 
     useEffect(() => {
@@ -33,11 +34,20 @@ const AuthScreen = ({
         })();
     }, []);
 
+    const ALLOWED_DOMAINS = ['@jpghana.com', '@juwelenergy.com'];
+
     const handleLoginAttempt = () => {
         if (!email.trim() || !password.trim()) {
             Alert.alert('Access Denied', 'Please enter both Email and Password.');
             return;
         }
+
+        const isValidDomain = ALLOWED_DOMAINS.some(domain => email.toLowerCase().endsWith(domain));
+        if (!isValidDomain) {
+            Alert.alert('Restricted Access', 'Login is limited to authorized domains only.');
+            return;
+        }
+
         onLogin(email, password);
     };
 
@@ -113,12 +123,19 @@ const AuthScreen = ({
                                     />
                                     <TextInput
                                         placeholder="Password"
-                                        secureTextEntry
+                                        secureTextEntry={!isPasswordVisible}
                                         placeholderTextColor={COLORS.tealMid}
-                                        style={styles.input}
+                                        style={[styles.input, { flex: 1 }]}
                                         value={password}
                                         onChangeText={setPassword}
                                     />
+                                    <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
+                                        {isPasswordVisible ? (
+                                            <EyeOff size={20} color={COLORS.tealLight} />
+                                        ) : (
+                                            <Eye size={20} color={COLORS.tealLight} />
+                                        )}
+                                    </TouchableOpacity>
                                 </View>
                                 <TouchableOpacity
                                     style={{ alignSelf: 'flex-end', marginTop: 10 }}

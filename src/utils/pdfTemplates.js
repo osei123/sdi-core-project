@@ -1,56 +1,66 @@
 export const createSingleReportHTML = (item, logoBase64) => {
-    // 1. Determine Color and Text based on status
-    let statusColor = '#22c55e'; // Green
-    let statusText = 'OPERATIONAL';
+  // 1. Determine Color and Text based on status
+  let statusColor = '#22c55e'; // Green
+  let statusText = 'OPERATIONAL';
 
-    if (item.status === 'GROUNDED') {
-        statusColor = '#dc2626'; // Red
-        statusText = 'UNSAFE - GROUNDED';
-    } else if (item.status === 'MONITOR') {
-        statusColor = '#ca8a04'; // Dark Yellow/Gold
-        statusText = 'SAFE TO DRIVE (MONITOR)';
-    }
+  if (item.status === 'GROUNDED') {
+    statusColor = '#dc2626'; // Red
+    statusText = 'UNSAFE - GROUNDED';
+  } else if (item.status === 'MONITOR') {
+    statusColor = '#ca8a04'; // Dark Yellow/Gold
+    statusText = 'SAFE TO DRIVE (MONITOR)';
+  }
 
-    // Helper for Pass/Fail icons in the table
-    const check = (status) =>
-        status === 'PASS'
-            ? '<span style="color:green; font-weight:bold; font-size: 14px;">&#9745; PASS</span>'
-            : '<span style="color:red; font-weight:bold; font-size: 14px;">&#9746; FAIL</span>';
+  // Helper for Pass/Fail icons in the table
+  const check = (status) =>
+    status === 'PASS'
+      ? '<span style="color:green; font-weight:bold; font-size: 14px;">&#9745; PASS</span>'
+      : '<span style="color:red; font-weight:bold; font-size: 14px;">&#9746; FAIL</span>';
 
-    // Build the rows for the table
-    const rows = item.items
-        .map(
-            (i) => `
+  // Build the rows for the table
+  const rows = item.items
+    .map(
+      (i) => `
   <tr style="border-bottom: 1px solid #e5e7eb;">
     <td style="padding: 12px; width: 25%; font-weight: bold; vertical-align: top; font-size: 13px;">${i.title
-                }</td>
+        }</td>
     <td style="padding: 12px; width: 35%; color: #4b5563; font-size: 11px; vertical-align: top; line-height: 1.4;">
       ${i.desc || 'No description available'}
       ${i.image
-                    ? `<br/><br/><img src="${i.image}" style="width: 100px; height: 100px; border-radius: 4px; border: 1px solid #ccc; margin-top: 5px;" />`
-                    : ''
-                }
+          ? `<br/><br/><img src="${i.image}" style="width: 100px; height: 100px; border-radius: 4px; border: 1px solid #ccc; margin-top: 5px;" />`
+          : ''
+        }
     </td>
     <td style="padding: 12px; width: 15%; text-align: center; vertical-align: top;">${check(
-                    i.status
-                )}</td>
+          i.status
+        )}</td>
     <td style="padding: 12px; width: 25%; vertical-align: top; background-color: ${i.status === 'FAIL' ? '#fef2f2' : 'transparent'
-                };">
+        };">
       ${i.severity
-                    ? `<div style="color:${i.severity === 'CRITICAL' ? '#dc2626' : '#ca8a04'
-                    }; font-weight:bold; font-size:10px; margin-bottom:4px;">${i.severity
-                    }</div>`
-                    : ''
-                }
+          ? `<div style="color:${i.severity === 'CRITICAL' ? '#dc2626' : '#ca8a04'
+          }; font-weight:bold; font-size:10px; margin-bottom:4px;">${i.severity
+          }</div>`
+          : ''
+        }
       <div style="font-style: italic; color: #374151; font-size: 11px;">${i.note || ''
-                }</div>
+        }</div>
     </td>
   </tr>
 `
-        )
-        .join('');
+    )
+    .join('');
 
-    return `
+  // Helper to ensure base64 prefix
+  const formatImage = (base64) => {
+    if (!base64) return null;
+    if (base64.startsWith('data:image')) return base64;
+    return `data:image/png;base64,${base64}`;
+  };
+
+  const driverSig = formatImage(item.driverSignature);
+  const inspectorSig = formatImage(item.inspectorSignature);
+
+  return `
     <html>
       <head>
         <style>
@@ -75,28 +85,28 @@ export const createSingleReportHTML = (item, logoBase64) => {
         
         <div class="header">
           ${logoBase64
-            ? `<img src="${logoBase64}" style="width: 100px; height: auto; margin-bottom: 15px;" />`
-            : ''
-        }
+      ? `<img src="${logoBase64}" style="width: 100px; height: auto; margin-bottom: 15px;" />`
+      : ''
+    }
           <div class="company-name">JP TRUSTEES LIMITED</div>
           <div class="report-title">Truck Inspection Report</div>
         </div>
 
         <div class="info-box">
           <div class="info-item"><span class="label">Inspector</span><span class="value">${item.inspector || 'Unknown'
-        }</span></div>
+    }</span></div>
           
           <div class="info-item"><span class="label">Date & Time</span><span class="value">${item.timestamp
-        }</span></div>
+    }</span></div>
 
           <div class="info-item"><span class="label">Driver Name</span><span class="value">${item.driverName || 'N/A'
-        }</span></div>
+    }</span></div>
 
           <div class="info-item"><span class="label">Truck Number</span><span class="value">${item.truck
-        }</span></div>
+    }</span></div>
           
           <div class="info-item"><span class="label">Depot Location</span><span class="value">${item.depot || '-'
-        }</span></div>
+    }</span></div>
           
           <div class="info-item"><span class="label">Result</span><span class="value" style="color: ${statusColor}; font-weight: 800;">${statusText}</span></div>
         </div>
@@ -117,28 +127,28 @@ export const createSingleReportHTML = (item, logoBase64) => {
 
         <div class="signature-row">
             <div class="sig-block">
-                ${item.driverSignature
-            ? `<img src="${item.driverSignature}" class="sig-img" />`
-            : '<div style="height: 50px; border-bottom: 1px solid #000;"></div>'
-        }
+                ${driverSig
+      ? `<img src="${driverSig}" class="sig-img" />`
+      : '<div style="height: 50px; border-bottom: 1px solid #000;"></div>'
+    }
                 <div class="sig-title">Driver Signature</div>
                 <div style="font-size: 10px; color: #666;">${item.driverName || 'Driver'
-        }</div>
+    }</div>
             </div>
 
             <div class="sig-block">
-                ${item.inspectorSignature
-            ? `<img src="${item.inspectorSignature}" class="sig-img" />`
-            : '<div style="height: 50px; border-bottom: 1px solid #000;"></div>'
-        }
+                ${inspectorSig
+      ? `<img src="${inspectorSig}" class="sig-img" />`
+      : '<div style="height: 50px; border-bottom: 1px solid #000;"></div>'
+    }
                 <div class="sig-title">Inspector Signature</div>
                 <div style="font-size: 10px; color: #666;">${item.inspector || 'Inspector'
-        }</div>
+    }</div>
             </div>
         </div>
 
         <div class="footer">Generated via Smart Digital Inspection (SDI) Core • Validated by ${item.inspector
-        }</div>
+    }</div>
       </body>
     </html>
   `;
@@ -146,26 +156,26 @@ export const createSingleReportHTML = (item, logoBase64) => {
 
 // 2. Template for the Full History Log
 export const createFullLogHTML = (history) => {
-    const rows = history
-        .map(
-            (item) => `
+  const rows = history
+    .map(
+      (item) => `
     <tr>
       <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.timestamp
-                }</td>
+        }</td>
       <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.truck
-                }</td>
+        }</td>
       <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.inspector
-                }</td>
+        }</td>
       <td style="padding: 10px; border-bottom: 1px solid #ddd; font-weight: bold; color: ${item.status === 'PASS' ? 'green' : 'red'
-                }">
+        }">
         ${item.status === 'PASS' ? 'PASS' : 'FAIL'}
       </td>
     </tr>
   `
-        )
-        .join('');
+    )
+    .join('');
 
-    return `
+  return `
     <html>
       <body style="font-family: Helvetica, Arial, sans-serif; padding: 40px;">
         <h1 style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px;">Inspection History Log</h1>

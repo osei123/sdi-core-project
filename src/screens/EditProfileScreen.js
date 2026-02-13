@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 import {
     View,
     Text,
@@ -25,15 +26,21 @@ const EditProfileScreen = ({
     onBack,
     onForgotPassword,
 }) => {
+    const { colors } = useTheme();
     const [form, setForm] = useState(currentData);
 
     return (
-        <View style={styles.screenBase}>
-            <View style={[styles.header, { justifyContent: 'flex-start', gap: 15 }]}>
+        <View style={[styles.screenBase, { backgroundColor: colors.bgPrimary }]}>
+            <View style={[styles.header, {
+                justifyContent: 'flex-start',
+                gap: 15,
+                backgroundColor: colors.bgSecondary,
+                borderBottomColor: colors.border
+            }]}>
                 <TouchableOpacity onPress={onBack}>
-                    <ArrowLeft size={24} color={COLORS.gray} />
+                    <ArrowLeft size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Edit Profile</Text>
+                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Edit Profile</Text>
             </View>
 
             <KeyboardAvoidingView
@@ -47,68 +54,68 @@ const EditProfileScreen = ({
                                 width: 100,
                                 height: 100,
                                 borderRadius: 50,
-                                backgroundColor: COLORS.card,
+                                backgroundColor: colors.bgTertiary,
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 borderWidth: 1,
-                                borderColor: COLORS.tealMid,
+                                borderColor: colors.tealMid,
                             }}>
-                            <User size={50} color={COLORS.tealLight} />
+                            <User size={50} color={colors.tealLight} />
                         </View>
                         <Text
-                            style={{ color: COLORS.blue, marginTop: 10, fontWeight: 'bold' }}>
+                            style={{ color: colors.blue, marginTop: 10, fontWeight: 'bold' }}>
                             Change Photo
                         </Text>
                     </View>
 
                     <View style={{ gap: 20 }}>
                         <View>
-                            <Text style={styles.label}>Full Name</Text>
-                            <View style={styles.inputWrapper}>
+                            <Text style={[styles.label, { color: colors.textSecondary }]}>Full Name</Text>
+                            <View style={[styles.inputWrapper, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}>
                                 <User
                                     size={20}
-                                    color={COLORS.tealLight}
+                                    color={colors.tealMid}
                                     style={{ marginRight: 10 }}
                                 />
                                 <TextInput
                                     value={form.name}
                                     onChangeText={(t) => setForm({ ...form, name: t })}
-                                    placeholderTextColor={COLORS.tealMid}
-                                    style={styles.input}
+                                    placeholderTextColor={colors.textMuted}
+                                    style={[styles.input, { color: colors.textPrimary }]}
                                 />
                             </View>
                         </View>
 
                         <View>
-                            <Text style={styles.label}>Staff ID</Text>
-                            <View style={styles.inputWrapper}>
+                            <Text style={[styles.label, { color: colors.textSecondary }]}>Staff ID</Text>
+                            <View style={[styles.inputWrapper, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}>
                                 <Hash
                                     size={20}
-                                    color={COLORS.tealLight}
+                                    color={colors.tealMid}
                                     style={{ marginRight: 10 }}
                                 />
                                 <TextInput
                                     value={form.id}
                                     onChangeText={(t) => setForm({ ...form, id: t })}
-                                    placeholderTextColor={COLORS.tealMid}
-                                    style={styles.input}
+                                    placeholderTextColor={colors.textMuted}
+                                    style={[styles.input, { color: colors.textPrimary }]}
                                 />
                             </View>
                         </View>
 
                         <View>
-                            <Text style={styles.label}>Email Address</Text>
-                            <View style={styles.inputWrapper}>
+                            <Text style={[styles.label, { color: colors.textSecondary }]}>Email Address</Text>
+                            <View style={[styles.inputWrapper, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}>
                                 <Mail
                                     size={20}
-                                    color={COLORS.tealLight}
+                                    color={colors.tealMid}
                                     style={{ marginRight: 10 }}
                                 />
                                 <TextInput
                                     value={form.email}
                                     onChangeText={(t) => setForm({ ...form, email: t })}
-                                    placeholderTextColor={COLORS.tealMid}
-                                    style={styles.input}
+                                    placeholderTextColor={colors.textMuted}
+                                    style={[styles.input, { color: colors.textPrimary }]}
                                     keyboardType="email-address"
                                 />
                             </View>
@@ -142,10 +149,10 @@ const EditProfileScreen = ({
                                     style={{ marginRight: 10 }}
                                 />
                                 <View style={{ flex: 1 }}>
-                                    <Text style={{ color: COLORS.white, fontWeight: 'bold' }}>
+                                    <Text style={{ color: colors.textPrimary, fontWeight: 'bold' }}>
                                         Reset Password
                                     </Text>
-                                    <Text style={{ color: COLORS.gray, fontSize: 10 }}>
+                                    <Text style={{ color: colors.textMuted, fontSize: 10 }}>
                                         Forgotten your password? Reset it via email.
                                     </Text>
                                 </View>
@@ -159,7 +166,7 @@ const EditProfileScreen = ({
                     </View>
                 </ScrollView>
 
-                <View style={styles.footerAction}>
+                <View style={[styles.footerAction, { backgroundColor: colors.bgPrimary, borderTopColor: colors.border }]}>
                     <TouchableOpacity
                         style={styles.primaryButton}
                         onPress={() => onSave(form)}>

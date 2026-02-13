@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "sdi-core-project",
+    "name": "SDI Core",
     "slug": "sdi-core",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,14 +13,19 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.obagyapongsorganization.sdicore",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.obagyapongsorganization.sdicore"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -30,6 +35,9 @@
         "projectId": "f718e8a9-32c1-4135-bd14-28e9e2e47a3f"
       }
     },
-    "owner": "obagyapongs-organization"
+    "owner": "obagyapongs-organization",
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }

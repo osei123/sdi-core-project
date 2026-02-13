@@ -18,19 +18,33 @@ import {
     Mail,
     Lock,
     UserPlus,
+    Phone,
+    Key,
+    Eye,
+    EyeOff
 } from 'lucide-react-native';
 import { styles } from '../styles/globalStyles';
 import { COLORS } from '../constants/colors';
+import { validatePassword } from '../utils/passwordValidation';
 
-const SignupScreen = ({ onRegister, onBack }) => {
+const SignupScreen = ({ onRegister, onVerifySignup, onBack }) => {
     const [fullName, setFullName] = useState('');
     const [username, setUsername] = useState('');
-    const [isManager, setIsManager] = useState(false); // <--- Add this toggle state
+    const [isManager, setIsManager] = useState(false);
 
     const [staffId, setStaffId] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [isRegistering, setIsRegistering] = useState(false); // <--- Loading state
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+    const [passwordValidation, setPasswordValidation] = useState(validatePassword(''));
+    const [isRegistering, setIsRegistering] = useState(false);
+
+    const ALLOWED_DOMAINS = ['@jpghana.com', '@juwelenergy.com'];
+
+    const handlePasswordChange = (text) => {
+        setPassword(text);
+        setPasswordValidation(validatePassword(text));
+    };
 
     const handleRegisterAttempt = async () => {
         // 1. Basic Validation
@@ -44,9 +58,21 @@ const SignupScreen = ({ onRegister, onBack }) => {
             return;
         }
 
+        // 2. Domain Validation
+        const isValidDomain = ALLOWED_DOMAINS.some(domain => email.toLowerCase().endsWith(domain));
+        if (!isValidDomain) {
+            Alert.alert('Restricted Access', 'Registration is limited to @jpghana.com and @juwelenergy.com email addresses.');
+            return;
+        }
+
+        if (!passwordValidation.isValid) {
+            Alert.alert('Weak Password', 'Please ensure your password meets all security requirements.');
+            return;
+        }
+
         setIsRegistering(true); // Start loading spinner
 
-        // 2. CAPTURE GPS LOCATION (Optimized for Speed)
+        // 3. CAPTURE GPS LOCATION (Optimized for Speed)
         let locationStamp = 'Location Unavailable';
 
         try {
@@ -72,8 +98,8 @@ const SignupScreen = ({ onRegister, onBack }) => {
             locationStamp = 'GPS Unavailable';
         }
 
-        // 3. Send Data to App
-        onRegister({
+        // 4. Send Data to App
+        await onRegister({
             name: fullName,
             username: username,
             staffId: staffId,
@@ -98,11 +124,11 @@ const SignupScreen = ({ onRegister, onBack }) => {
                         <TouchableOpacity onPress={onBack} style={{ marginBottom: 20 }}>
                             <ArrowLeft size={24} color={COLORS.white} />
                         </TouchableOpacity>
+
                         <Text style={styles.authTitle}>Create Account</Text>
                         <Text style={styles.authSubtitle}>
                             Join the Smart Digital Inspection Core
                         </Text>
-
                         <View style={{ width: '100%', gap: 15 }}>
                             {/* Form Inputs */}
                             <View>
@@ -160,6 +186,8 @@ const SignupScreen = ({ onRegister, onBack }) => {
                                 </View>
                             </View>
 
+
+
                             <View>
                                 <Text style={styles.label}>Email Address *</Text>
                                 <View style={styles.inputWrapper}>
@@ -190,13 +218,35 @@ const SignupScreen = ({ onRegister, onBack }) => {
                                     />
                                     <TextInput
                                         placeholder=" "
-                                        secureTextEntry
+                                        secureTextEntry={!isPasswordVisible}
                                         placeholderTextColor={COLORS.tealMid}
-                                        style={styles.input}
+                                        style={[styles.input, { flex: 1 }]}
                                         value={password}
-                                        onChangeText={setPassword}
+                                        onChangeText={handlePasswordChange}
                                     />
+                                    <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
+                                        {isPasswordVisible ? (
+                                            <EyeOff size={20} color={COLORS.tealLight} />
+                                        ) : (
+                                            <Eye size={20} color={COLORS.tealLight} />
+                                        )}
+                                    </TouchableOpacity>
                                 </View>
+                                {/* Password Strength Indicator */}
+                                {password.length > 0 && (
+                                    <View style={{ marginTop: 10, backgroundColor: 'rgba(0,0,0,0.2)', padding: 10, borderRadius: 8 }}>
+                                        <Text style={{ color: COLORS.tealLight, marginBottom: 5, fontSize: 12 }}>
+                                            Strength: <Text style={{ fontWeight: 'bold' }}>{passwordValidation.strength}</Text>
+                                        </Text>
+                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                            <RuleItem label="8+ chars" satisfied={passwordValidation.rules.minLength} />
+                                            <RuleItem label="Uppercase" satisfied={passwordValidation.rules.hasUpper} />
+                                            <RuleItem label="Lowercase" satisfied={passwordValidation.rules.hasLower} />
+                                            <RuleItem label="Number" satisfied={passwordValidation.rules.hasNumber} />
+                                            <RuleItem label="Symbol" satisfied={passwordValidation.rules.hasSymbol} />
+                                        </View>
+                                    </View>
+                                )}
                             </View>
                             {/* --- ROLE SELECTION TOGGLE --- */}
                             <View style={{ marginBottom: 15 }}>
@@ -257,12 +307,26 @@ const SignupScreen = ({ onRegister, onBack }) => {
                                 </Text>
                             </TouchableOpacity>
                         </View>
+
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
-        </View>
+        </View >
     );
 };
+
+const RuleItem = ({ label, satisfied }) => (
+    <View style={{ flexDirection: 'row', alignItems: 'center', opacity: satisfied ? 1 : 0.5 }}>
+        <View style={{
+            width: 8, height: 8, borderRadius: 4,
+            backgroundColor: satisfied ? COLORS.green : COLORS.gray,
+            marginRight: 4
+        }} />
+        <Text style={{ color: satisfied ? COLORS.white : COLORS.gray, fontSize: 11 }}>
+            {label}
+        </Text>
+    </View>
+);
 
 export default SignupScreen;
 

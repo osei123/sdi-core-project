@@ -8,6 +8,9 @@ import { COLORS } from './src/constants/colors';
 import { CHECKLIST_DATA } from './src/data/checklistData';
 import { styles } from './src/styles/globalStyles';
 
+// --- THEME ---
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
+
 // --- HOOKS ---
 import { useAppLogic } from './src/hooks/useAppLogic';
 
@@ -25,11 +28,14 @@ import InspectionDetailsScreen from './src/screens/InspectionDetailsScreen';
 import PreInspectionScreen from './src/screens/PreInspectionScreen';
 import InspectionFlow from './src/screens/InspectionFlow';
 import SummaryScreen from './src/screens/SummaryScreen';
+import QualityDataScreen from './src/screens/QualityDataScreen';
 
 // --- COMPONENTS ---
 import BottomNav from './src/components/BottomNav';
 
-export default function App() {
+// Inner component that uses theme
+function AppContent() {
+  const { theme, colors } = useTheme();
   const {
     currentScreen,
     userRole,
@@ -51,7 +57,15 @@ export default function App() {
     handleViewDetails,
     handleStartInspection,
     handleInspectionComplete,
-    handleLogout
+    handleLogout,
+    handleForgotPassword,
+    handleVerifyOtp,
+    handleUpdatePassword,
+    handleVerifySignupOtp,
+    fetchHistory,
+    qualityReports,
+    handleSaveQualityData,
+    handleExportQualityPDF,
   } = useAppLogic();
 
   // SCREEN CONTROLLER
@@ -86,6 +100,7 @@ export default function App() {
         return (
           <SignupScreen
             onRegister={handleNewUser}
+            onVerifySignup={handleVerifySignupOtp}
             onBack={() => navigate('auth')}
           />
         );
@@ -100,6 +115,9 @@ export default function App() {
         return (
           <ForgotPasswordScreen
             onBack={() => navigate('auth')}
+            onReset={handleForgotPassword}
+            onVerify={handleVerifyOtp}
+            onUpdate={handleUpdatePassword}
             onComplete={() => navigate('auth')}
           />
         );
@@ -114,6 +132,8 @@ export default function App() {
             onAddManager={() => navigate('createManager')}
             onEditProfile={() => navigate('editProfile')}
             onDeleteAccount={handleLogout}
+            qualityReports={qualityReports}
+            onExportQuality={handleExportQualityPDF}
           />
         ) : (
           <InspectorHomeScreen
@@ -126,6 +146,7 @@ export default function App() {
             onDeleteAccount={handleLogout}
             onSwitchToManager={() => setUserRole('manager')}
             onEditProfile={() => navigate('editProfile')}
+            onRefresh={() => fetchHistory(userData.role, userData.id)}
           />
         );
       case 'editProfile':
@@ -175,21 +196,31 @@ export default function App() {
         );
       case 'summary':
         return <SummaryScreen results={results} onHome={handleSaveAndExit} />;
+      case 'quality':
+        return <QualityDataScreen onBack={() => navigate('home')} onSave={handleSaveQualityData} />;
       default:
         return <SplashScreen />;
     }
   };
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor={COLORS.bgDark} />
-        {renderScreen()}
-        {(currentScreen === 'home' || currentScreen === 'history') &&
-          userRole === 'inspector' && (
-            <BottomNav activeTab={currentScreen} onNavigate={navigate} />
-          )}
-      </SafeAreaView>
-    </SafeAreaProvider>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <StatusBar barStyle={theme.statusBarStyle} backgroundColor={colors.bgPrimary} />
+      {renderScreen()}
+      {(currentScreen === 'home' || currentScreen === 'history' || currentScreen === 'quality') &&
+        userRole === 'inspector' && (
+          <BottomNav activeTab={currentScreen} onNavigate={navigate} />
+        )}
+    </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <SafeAreaProvider>
+        <AppContent />
+      </SafeAreaProvider>
+    </ThemeProvider>
   );
 }
