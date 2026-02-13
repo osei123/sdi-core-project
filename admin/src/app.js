@@ -29,9 +29,8 @@ const pageTitles = {
 };
 
 async function init() {
-  // Check for recovery flow or email confirmation
-  // Supabase often puts these in the hash for implicit flow: #access_token=...&type=recovery
-  // or as query params for PKCE code exchange, which getSession handles.
+  // Check for recovery flow immediately before async calls might clear hash
+  const isRecovery = window.location.hash.includes('type=recovery');
 
   // We listen to onAuthStateChange to catch these events
   const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -63,6 +62,11 @@ async function init() {
     const { data: { session: rawSession } } = await supabase.auth.getSession();
     if (rawSession) {
       // User is logged in but not a manager (checkSession returned null)
+
+      // CRITICAL: If this is a Password Recovery flow, DO NOT show the success message yet.
+      // The onAuthStateChange event 'PASSWORD_RECOVERY' will handle rendering the form.
+      if (isRecovery) return;
+
       // Check if they are recovering password (handled by event above mostly, but let's be safe)
       // OR if they just verified their email.
 
