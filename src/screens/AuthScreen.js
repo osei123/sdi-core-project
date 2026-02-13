@@ -34,7 +34,7 @@ const AuthScreen = ({
         })();
     }, []);
 
-    const ALLOWED_DOMAINS = ['@jpghana.com', '@juwelenergy.com'];
+
 
     const handleLoginAttempt = () => {
         if (!email.trim() || !password.trim()) {
@@ -42,11 +42,7 @@ const AuthScreen = ({
             return;
         }
 
-        const isValidDomain = ALLOWED_DOMAINS.some(domain => email.toLowerCase().endsWith(domain));
-        if (!isValidDomain) {
-            Alert.alert('Restricted Access', 'Login is limited to authorized domains only.');
-            return;
-        }
+
 
         onLogin(email, password);
     };

@@ -391,28 +391,18 @@ export const useAppLogic = () => {
 
     // PASSWORD RESET
     // PASSWORD RESET FLOW
+    // PASSWORD RESET FLOW
     const handleForgotPassword = async (contact) => {
         setIsLoading(true);
-        const isEmail = contact.includes('@');
-        let error = null;
-        let type = null;
-
-        if (isEmail) {
-            type = 'email';
-            const res = await supabase.auth.signInWithOtp({
-                email: contact,
-                options: { shouldCreateUser: false }
-            });
-            error = res.error;
-        } else {
-            type = 'sms';
-            // Assuming contact is a phone number
-            const res = await supabase.auth.signInWithOtp({
-                phone: contact,
-                options: { shouldCreateUser: false }
-            });
-            error = res.error;
+        // We only support Email for this flow now (Link based)
+        if (!contact.includes('@')) {
+            Alert.alert('Invalid Input', 'Please enter a valid email address.');
+            setIsLoading(false);
+            return null;
         }
+
+        // Send Password Reset Link
+        const { error } = await supabase.auth.resetPasswordForEmail(contact);
 
         setIsLoading(false);
 
@@ -424,7 +414,7 @@ export const useAppLogic = () => {
             Alert.alert('Error', msg);
             return null;
         }
-        return type; // Return 'email' or 'sms'
+        return 'email'; // Return 'email' to signal success
     };
 
     const handleVerifyOtp = async (contact, token, type) => {

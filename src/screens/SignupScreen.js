@@ -39,7 +39,7 @@ const SignupScreen = ({ onRegister, onVerifySignup, onBack }) => {
     const [passwordValidation, setPasswordValidation] = useState(validatePassword(''));
     const [isRegistering, setIsRegistering] = useState(false);
 
-    const ALLOWED_DOMAINS = ['@jpghana.com', '@juwelenergy.com'];
+
 
     const handlePasswordChange = (text) => {
         setPassword(text);
@@ -58,12 +58,7 @@ const SignupScreen = ({ onRegister, onVerifySignup, onBack }) => {
             return;
         }
 
-        // 2. Domain Validation
-        const isValidDomain = ALLOWED_DOMAINS.some(domain => email.toLowerCase().endsWith(domain));
-        if (!isValidDomain) {
-            Alert.alert('Restricted Access', 'Registration is limited to @jpghana.com and @juwelenergy.com email addresses.');
-            return;
-        }
+
 
         if (!passwordValidation.isValid) {
             Alert.alert('Weak Password', 'Please ensure your password meets all security requirements.');
