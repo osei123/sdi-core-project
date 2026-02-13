@@ -7,6 +7,9 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+    // Log the method
+    console.log(`Received request: ${req.method}`)
+
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
     }
@@ -28,8 +31,10 @@ serve(async (req) => {
         const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
 
         if (userError || !user) {
+            console.error('Auth Error:', userError)
             throw new Error(`Unauthorized: ${userError?.message || 'No user found'}`)
         }
+        console.log('Requestor:', user.email, user.id)
 
         const { data: profile } = await supabaseClient
             .from('profiles')
@@ -38,12 +43,17 @@ serve(async (req) => {
             .single()
 
         if (profile?.role !== 'manager') {
+            console.error('Role Error. Got:', profile?.role)
             throw new Error('Unauthorized: Manager role required')
         }
+        console.log('Requestor Role:', profile.role)
 
         // 2. Get Target ID from Body
-        const { user_id } = await req.json()
-        if (!user_id) throw new Error('Missing user_id')
+        const body = await req.json()
+        console.log('Request Body:', body)
+        const { user_id } = body
+
+        if (!user_id) throw new Error('Missing user_id in request body')
 
         // 3. Prevent deleting self
         if (user_id === user.id) throw new Error('Cannot delete your own account')
@@ -54,21 +64,23 @@ serve(async (req) => {
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         )
 
-        // 5. Delete Related Data (Explicitly, to be safe & complete)
-        // Note: Using Service Role, so RLS is bypassed.
-        // We delete dependent data first to avoid foreign key constraints (if no cascade)
-        console.log(`Deleting data for user: ${user_id}`)
+        // 5. Delete Related Data
+        console.log(`Deleting data for target user: ${user_id}`)
 
+        console.log('Deleting inspections...')
         const { error: inspError } = await supabaseAdmin.from('inspections').delete().eq('inspector_id', user_id)
         if (inspError) console.error('Error deleting inspections:', inspError)
 
+        console.log('Deleting quality reports...')
         const { error: qualError } = await supabaseAdmin.from('quality_reports').delete().eq('inspector_id', user_id)
         if (qualError) console.error('Error deleting quality reports:', qualError)
 
+        console.log('Deleting profile...')
         const { error: profileDeleteError } = await supabaseAdmin.from('profiles').delete().eq('id', user_id)
         if (profileDeleteError) console.error('Error deleting profile:', profileDeleteError)
 
         // 6. Delete Auth User
+        console.log('Deleting auth user...')
         const { data: deleteData, error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user_id)
 
         if (deleteError) {
@@ -76,11 +88,13 @@ serve(async (req) => {
             throw deleteError
         }
 
+        console.log('Deletion successful')
         return new Response(JSON.stringify({ message: 'User deleted successfully' }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         })
     } catch (error) {
+        console.error('Function Error:', error)
         return new Response(JSON.stringify({ error: error.message }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400,
