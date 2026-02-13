@@ -214,7 +214,17 @@ function confirmDeleteUser(user) {
     } catch (e) {
       console.error('Delete error:', e);
       btn.textContent = 'Error!';
-      setTimeout(() => overlay.remove(), 1500);
+
+      const errorMsg = overlay.querySelector('#delete-error-msg') || document.createElement('div');
+      errorMsg.id = 'delete-error-msg';
+      errorMsg.style.color = '#ff4d4f';
+      errorMsg.style.marginTop = '12px';
+      errorMsg.style.fontSize = '0.9rem';
+      errorMsg.textContent = e.message || 'Failed to delete user';
+
+      if (!overlay.querySelector('#delete-error-msg')) {
+        overlay.querySelector('.confirm-box').appendChild(errorMsg);
+      }
     }
   });
 }
