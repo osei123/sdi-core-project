@@ -60,7 +60,7 @@ export const useAppLogic = () => {
             } else {
                 // If on splash, go to onboard. If elsewhere, stay there (auth screen handles unauth)
                 if (currentScreen === 'splash') {
-                    setTimeout(() => setCurrentScreen('onboard'), 2500);
+                    setTimeout(() => setCurrentScreen('onboard'), 1000);
                 }
             }
         });

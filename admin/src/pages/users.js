@@ -199,10 +199,13 @@ function confirmDeleteUser(user) {
     btn.disabled = true;
 
     try {
-      // Delete related data first
-      await supabase.from('inspections').delete().eq('inspector_id', user.id);
-      await supabase.from('quality_reports').delete().eq('inspector_id', user.id);
-      await supabase.from('profiles').delete().eq('id', user.id);
+      // Delete user via Edge Function (handles Auth + Data)
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { user_id: user.id }
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       // Remove from local array
       allUsers = allUsers.filter(u => u.id !== user.id);
