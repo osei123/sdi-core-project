@@ -1,180 +1,282 @@
 /**
- * Generate a professional PDF inspection report by opening a styled
- * HTML page in a new window and triggering the browser print dialog.
- * Users can "Save as PDF" from their browser's native print dialog.
+ * PDF Report Generator — Web App
+ * Uses the same visual design as the mobile/admin pdfGenerator.js.
+ * Opens a styled HTML page in a new tab with a print/download toolbar.
  */
 
-const statusConfig = {
-    GROUNDED: { label: 'GROUNDED (UNSAFE)', color: '#dc2626', bg: '#fef2f2' },
-    MONITOR: { label: 'SAFE TO DRIVE (MONITOR)', color: '#ca8a04', bg: '#fefce8' },
-    OPERATIONAL: { label: 'OPERATIONAL', color: '#16a34a', bg: '#f0fdf4' },
+// --- HELPERS ---
+
+const formatImage = (str) => {
+    if (!str) return null;
+    if (str.startsWith('data:image') || str.startsWith('http')) return str;
+    return `data:image/png;base64,${str}`;
 };
 
-export function generateInspectionPDF(item) {
-    const results = item.results || [];
-    const passes = results.filter((r) => r.status === 'PASS');
-    const fails = results.filter((r) => r.status === 'FAIL');
-    const cfg = statusConfig[item.status] || statusConfig.OPERATIONAL;
+const formatDate = (dateString) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleString();
+};
 
-    const checklistRows = results.map((r) => {
-        const severityBadge = r.severity
-            ? `<span style="
-                display:inline-block;
-                padding:2px 8px;
-                border-radius:4px;
-                font-size:9px;
-                font-weight:700;
-                color:#fff;
-                background:${r.severity === 'CRITICAL' ? '#dc2626' : r.severity === 'MODERATE' ? '#ca8a04' : '#2563eb'};
-            ">${r.severity}</span>`
-            : '';
-        const note = r.note ? `<div style="font-size:10px;color:#6b7280;font-style:italic;margin-top:2px;">Note: ${r.note}</div>` : '';
-        return `
-            <tr>
-                <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:11px;color:#6b7280;">${r.category || '—'}</td>
-                <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">
-                    <div style="font-weight:600;font-size:12px;color:#111827;">${r.title}</div>
-                    <div style="font-size:10px;color:#6b7280;margin-top:1px;">${r.desc || ''}</div>
-                    ${note}
-                </td>
-                <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">
-                    <span style="
-                        display:inline-block;
-                        padding:3px 10px;
-                        border-radius:4px;
-                        font-size:10px;
-                        font-weight:700;
-                        color:#fff;
-                        background:${r.status === 'PASS' ? '#16a34a' : '#dc2626'};
-                    ">${r.status}</span>
-                </td>
-                <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${severityBadge || '—'}</td>
-            </tr>
-        `;
-    }).join('');
+const getStatusColor = (status) => {
+    switch (status) {
+        case 'PASS': return '#22c55e';
+        case 'FAIL': return '#ef4444';
+        case 'GROUNDED': return '#dc2626';
+        case 'MONITOR': return '#ca8a04';
+        default: return '#6b7280';
+    }
+};
 
-    // Signature images
-    const driverSig = item.driverSignature
-        ? `<div style="text-align:center;"><img src="${item.driverSignature}" style="max-width:200px;max-height:80px;border:1px solid #e5e7eb;border-radius:4px;" /><div style="font-size:10px;color:#6b7280;margin-top:4px;">Driver Signature</div></div>`
-        : '<div style="text-align:center;color:#9ca3af;font-size:11px;">No driver signature</div>';
-    const inspectorSig = item.inspectorSignature
-        ? `<div style="text-align:center;"><img src="${item.inspectorSignature}" style="max-width:200px;max-height:80px;border:1px solid #e5e7eb;border-radius:4px;" /><div style="font-size:10px;color:#6b7280;margin-top:4px;">Inspector Signature</div></div>`
-        : '<div style="text-align:center;color:#9ca3af;font-size:11px;">No inspector signature</div>';
+const getStatusText = (status) => {
+    switch (status) {
+        case 'PASS': return 'OPERATIONAL';
+        case 'FAIL': return 'SAFETY ISSUE';
+        case 'GROUNDED': return 'UNSAFE - GROUNDED';
+        case 'MONITOR': return 'SAFE TO DRIVE (MONITOR)';
+        default: return status || 'UNKNOWN';
+    }
+};
 
-    const html = `<!DOCTYPE html>
+const checkIcon = (status) =>
+    status === 'PASS'
+        ? '<span style="color:green; font-weight:bold; font-size: 14px;">&#9745; PASS</span>'
+        : '<span style="color:red; font-weight:bold; font-size: 14px;">&#9746; FAIL</span>';
+
+// --- INSPECTION REPORT (matches mobile template) ---
+
+function createInspectionHTML(data) {
+    const statusColor = getStatusColor(data.status);
+    const statusText = getStatusText(data.status);
+
+    const items = data.results || data.items || [];
+    const rows = items.map((i) => `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 12px; width: 25%; font-weight: bold; vertical-align: top; font-size: 13px;">${i.title}</td>
+            <td style="padding: 12px; width: 35%; color: #4b5563; font-size: 11px; vertical-align: top; line-height: 1.4;">
+                ${i.desc || 'No description available'}
+                ${i.image ? `<br/><br/><img src="${formatImage(i.image)}" style="width: 100px; height: 100px; border-radius: 4px; border: 1px solid #ccc; margin-top: 5px;" />` : ''}
+            </td>
+            <td style="padding: 12px; width: 15%; text-align: center; vertical-align: top;">${checkIcon(i.status)}</td>
+            <td style="padding: 12px; width: 25%; vertical-align: top; background-color: ${i.status === 'FAIL' ? '#fef2f2' : 'transparent'};">
+                ${i.severity ? `<div style="color:${i.severity === 'CRITICAL' ? '#dc2626' : '#ca8a04'}; font-weight:bold; font-size:10px; margin-bottom:4px;">${i.severity}</div>` : ''}
+                <div style="font-style: italic; color: #374151; font-size: 11px;">${i.note || ''}</div>
+            </td>
+        </tr>
+    `).join('');
+
+    const driverSig = formatImage(data.driverSignature || data.driver_signature);
+    const inspectorSig = formatImage(data.inspectorSignature || data.inspector_signature);
+
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Inspection Report — ${item.truck}</title>
+    <title>Inspection Report — ${data.truck || data.truck_number || 'Report'}</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', -apple-system, sans-serif; color: #111827; background: #fff; }
+        body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #111827; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 4px solid ${statusColor}; padding-bottom: 20px; }
+        .company-name { font-size: 26px; font-weight: 800; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+        .report-title { font-size: 14px; letter-spacing: 2px; color: #6b7280; text-transform: uppercase; }
+        .info-box { display: flex; flex-wrap: wrap; gap: 20px; background-color: #f9fafb; padding: 25px; border-radius: 12px; margin-bottom: 40px; border: 1px solid #e5e7eb; }
+        .info-item { width: 45%; margin-bottom: 15px; }
+        .label { font-size: 9px; text-transform: uppercase; color: #9ca3af; font-weight: 700; margin-bottom: 3px; }
+        .value { font-size: 15px; font-weight: 600; color: #1f2937; border-bottom: 1px solid #d1d5db; padding-bottom: 3px; display: block; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background-color: #1f2937; color: #ffffff; padding: 12px; text-align: left; text-transform: uppercase; font-size: 10px; letter-spacing: 1px; }
+        .footer { margin-top: 60px; text-align: center; font-size: 10px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+        .signature-row { display: flex; justify-content: space-between; margin-top: 50px; padding-top: 20px; }
+        .sig-block { width: 45%; text-align: center; }
+        .sig-img { width: 100%; max-width: 200px; height: auto; border-bottom: 1px solid #000; margin-bottom: 8px; }
+        .sig-title { font-weight: bold; font-size: 12px; text-transform: uppercase; }
         @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .no-print { display: none !important; }
-            @page { margin: 0.6in; size: A4; }
+            @page { margin: 0.5in; size: A4; }
         }
-        .header { background: #0f172a; color: #fff; padding: 28px 32px; display: flex; justify-content: space-between; align-items: center; }
-        .header .brand { font-size: 22px; font-weight: 800; letter-spacing: 1px; }
-        .header .brand span { color: #2dd4bf; }
-        .header .meta { text-align: right; font-size: 11px; color: #94a3b8; }
-        .status-banner {
-            padding: 16px 32px; display: flex; justify-content: space-between; align-items: center;
-            background: ${cfg.bg}; border-bottom: 3px solid ${cfg.color};
-        }
-        .status-banner .label { font-size: 18px; font-weight: 800; color: ${cfg.color}; }
-        .status-banner .stats { display: flex; gap: 24px; }
-        .status-banner .stat { text-align: center; }
-        .status-banner .stat .num { font-size: 24px; font-weight: 800; color: #111827; }
-        .status-banner .stat .desc { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
-        .section { padding: 20px 32px; }
-        .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin-bottom: 12px; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .info-item { background: #f9fafb; border-radius: 6px; padding: 12px 16px; }
-        .info-item .label { font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.3px; }
-        .info-item .value { font-size: 14px; font-weight: 600; color: #111827; margin-top: 2px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 10px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; border-bottom: 2px solid #e5e7eb; background: #f9fafb; }
-        .signatures { display: flex; gap: 32px; justify-content: center; margin-top: 8px; }
-        .footer { text-align: center; padding: 16px; font-size: 10px; color: #9ca3af; border-top: 1px solid #e5e7eb; margin-top: 24px; }
-        .download-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #0f172a; padding: 12px 24px; display: flex; justify-content: center; gap: 12px; z-index: 100; }
+        .download-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #1f2937; padding: 12px 24px; display: flex; justify-content: center; gap: 12px; z-index: 100; }
         .download-bar button { padding: 10px 28px; border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; }
-        .btn-dl { background: #2dd4bf; color: #0f172a; }
-        .btn-dl:hover { background: #5eead4; }
-        .btn-close { background: #334155; color: #e2e8f0; }
-        .btn-close:hover { background: #475569; }
+        .btn-dl { background: #22c55e; color: #fff; }
+        .btn-dl:hover { background: #16a34a; }
+        .btn-close { background: #374151; color: #e2e8f0; }
+        .btn-close:hover { background: #4b5563; }
     </style>
 </head>
 <body>
-    <!-- Action bar (hidden during print) -->
     <div class="download-bar no-print">
         <button class="btn-dl" onclick="window.print()">⬇ Download as PDF</button>
         <button class="btn-close" onclick="window.close()">✕ Close Preview</button>
     </div>
 
-    <!-- Report -->
+    <div class="header">
+        <div class="company-name">JP TRUSTEES LIMITED</div>
+        <div class="report-title">Truck Inspection Report</div>
+    </div>
+
+    <div class="info-box">
+        <div class="info-item"><span class="label">Inspector</span><span class="value">${data.inspectorName || data.inspector_name || 'Unknown'}</span></div>
+        <div class="info-item"><span class="label">Date & Time</span><span class="value">${formatDate(data.created_at || data.timestamp)}</span></div>
+        <div class="info-item"><span class="label">Driver Name</span><span class="value">${data.driver || data.driver_name || 'N/A'}</span></div>
+        <div class="info-item"><span class="label">Truck Number</span><span class="value">${data.truck || data.truck_number || '-'}</span></div>
+        <div class="info-item"><span class="label">Depot Location</span><span class="value">${data.depot || '-'}</span></div>
+        <div class="info-item"><span class="label">Result</span><span class="value" style="color: ${statusColor}; font-weight: 800;">${statusText}</span></div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25%">Inspection Item</th>
+                <th style="width: 35%">Description</th>
+                <th style="width: 15%; text-align: center;">Result</th>
+                <th style="width: 25%">Notes / Defects</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${rows || '<tr><td colspan="4" style="padding:20px;text-align:center;color:#9ca3af;">No checklist data</td></tr>'}
+        </tbody>
+    </table>
+
+    <div class="signature-row">
+        <div class="sig-block">
+            ${driverSig ? `<img src="${driverSig}" class="sig-img" />` : '<div style="height: 50px; border-bottom: 1px solid #000;"></div>'}
+            <div class="sig-title">Driver Signature</div>
+            <div style="font-size: 10px; color: #666;">${data.driver || data.driver_name || 'Driver'}</div>
+        </div>
+
+        <div class="sig-block">
+            ${inspectorSig ? `<img src="${inspectorSig}" class="sig-img" />` : '<div style="height: 50px; border-bottom: 1px solid #000;"></div>'}
+            <div class="sig-title">Inspector Signature</div>
+            <div style="font-size: 10px; color: #666;">${data.inspectorName || data.inspector_name || 'Inspector'}</div>
+        </div>
+    </div>
+
+    <div class="footer">Generated via Smart Digital Inspection (SDI) Core</div>
+</body>
+</html>`;
+}
+
+// --- QUALITY REPORT (matches mobile template) ---
+
+function createQualityHTML(data) {
+    const themeColor = (data.company_name || '').toUpperCase().includes('MOREFUEL') ? '#E31E24' : '#7CB342';
+    const randomNum = Math.floor(Math.random() * 99999) + 1;
+    const invoiceNumber = String(randomNum).padStart(5, '0');
+
+    const compartments = data.compartments || [];
+    const quality = data.quality_params || {};
+
+    const inspectorSig = formatImage(data.inspectorSignature || data.inspector_signature);
+    const sealerSig = formatImage(data.sealer_signature);
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Quality Report — ${data.truck_number || data.truck || 'Report'}</title>
+    <style>
+        body { font-family: 'Helvetica', 'Arial', sans-serif; color: #333; margin: 0; padding: 40px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .header { border-bottom: 3px solid ${themeColor}; padding-bottom: 10px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .header-title { font-size: 28px; font-weight: bold; color: ${themeColor}; text-transform: uppercase; }
+        .header-meta { text-align: right; font-size: 12px; color: #666; }
+        .section-title { background-color: ${themeColor}; color: white; padding: 8px 15px; font-size: 16px; font-weight: bold; border-radius: 4px; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 13px; }
+        th { background-color: #f0f0f0; border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold; }
+        td { border: 1px solid #ddd; padding: 8px; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .col { flex: 1; margin-right: 15px; }
+        .col:last-child { margin-right: 0; }
+        .key-value-box { background: #fafafa; border: 1px solid #eee; padding: 10px; border-radius: 4px; margin-bottom: 5px; }
+        .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+        .value { font-size: 14px; font-weight: bold; color: #000; margin-top: 3px; }
+        .footer-box { margin-top: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background-color: #fcfcfc; page-break-inside: avoid; }
+        .sig-block { margin-top: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; min-height: 40px; }
+        .sig-img { height: 50px; width: auto; }
+        @media print {
+            .no-print { display: none !important; }
+            @page { margin: 0.5in; size: A4; }
+        }
+        .download-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #1f2937; padding: 12px 24px; display: flex; justify-content: center; gap: 12px; z-index: 100; }
+        .download-bar button { padding: 10px 28px; border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; }
+        .btn-dl { background: ${themeColor}; color: #fff; }
+        .btn-close { background: #374151; color: #e2e8f0; }
+    </style>
+</head>
+<body>
+    <div class="download-bar no-print">
+        <button class="btn-dl" onclick="window.print()">⬇ Download as PDF</button>
+        <button class="btn-close" onclick="window.close()">✕ Close Preview</button>
+    </div>
+
     <div class="header">
         <div>
-            <div class="brand">SDI <span>CORE</span></div>
-            <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Safety & Distribution Inspection Report</div>
+            <div class="header-title">QUALITY DATA - ${(data.company_name || '').toUpperCase()}</div>
         </div>
-        <div class="meta">
-            <div style="font-weight:600;color:#e2e8f0;">Report #${item.id ? item.id.slice(0, 8).toUpperCase() : '—'}</div>
-            <div>${item.timestamp}</div>
-        </div>
-    </div>
-
-    <div class="status-banner">
-        <div class="label">${cfg.label}</div>
-        <div class="stats">
-            <div class="stat"><div class="num">${results.length}</div><div class="desc">Total Items</div></div>
-            <div class="stat"><div class="num" style="color:#16a34a;">${passes.length}</div><div class="desc">Passed</div></div>
-            <div class="stat"><div class="num" style="color:#dc2626;">${fails.length}</div><div class="desc">Failed</div></div>
+        <div class="header-meta">
+            <span style="font-size: 12px; font-weight: bold; color: #000; display: block; margin-bottom: 2px;">INVOICE #: ${invoiceNumber}</span>
+            Generated: ${formatDate(new Date())}<br/>Status: Final
         </div>
     </div>
 
-    <div class="section">
-        <div class="section-title">Inspection Details</div>
-        <div class="info-grid">
-            <div class="info-item"><div class="label">Driver</div><div class="value">${item.driver || '—'}</div></div>
-            <div class="info-item"><div class="label">Truck Number</div><div class="value">${item.truck || '—'}</div></div>
-            <div class="info-item"><div class="label">Transporter</div><div class="value">${item.transporter || '—'}</div></div>
-            <div class="info-item"><div class="label">Depot</div><div class="value">${item.depot || '—'}</div></div>
-            <div class="info-item"><div class="label">Inspector</div><div class="value">${item.inspectorName || '—'}</div></div>
-            <div class="info-item"><div class="label">Date & Time</div><div class="value">${item.timestamp}</div></div>
+    <div class="section-title">Truck Information</div>
+    <div class="row">
+        <div class="col key-value-box"><div class="label">Truck Number</div><div class="value">${data.truck_number || data.truck || '-'}</div></div>
+        <div class="col key-value-box"><div class="label">Product</div><div class="value">${data.product || '-'}</div></div>
+        <div class="col key-value-box"><div class="label">Depot</div><div class="value">${data.depot || '-'}</div></div>
+    </div>
+
+    <div class="section-title">Compartment Levels</div>
+    <table>
+        <thead><tr><th style="width: 10%">Number</th><th>Litres</th><th>Certificate Level</th><th>Product Level</th></tr></thead>
+        <tbody>
+            ${compartments.map((comp) => `<tr><td style="text-align: center; font-weight: bold;">${comp.id}</td><td>${comp.litres || '-'}</td><td>${comp.cert || '-'}</td><td>${comp.prod || '-'}</td></tr>`).join('')}
+        </tbody>
+    </table>
+
+    <div class="section-title">Product Quality Parameters</div>
+    <div class="row">
+        <div class="col">
+            <div class="key-value-box"><div class="label">Density</div><div class="value">${quality.density || '-'} kg/m³</div></div>
+            <div class="key-value-box"><div class="label">Temperature</div><div class="value">${quality.temp || '-'} °C</div></div>
+            <div class="key-value-box"><div class="label">Water Status</div><div class="value">${quality.water || '-'}</div></div>
+        </div>
+        <div class="col">
+            <div class="key-value-box"><div class="label">Diff Comp Level</div><div class="value">${quality.diffComp || '-'} Lts</div></div>
+            <div class="key-value-box"><div class="label">Additive</div><div class="value">${quality.additive || '-'} Lts</div></div>
+            <div class="key-value-box"><div class="label">Product Color</div><div class="value">${quality.color || '-'}</div></div>
         </div>
     </div>
 
-    <div class="section">
-        <div class="section-title">Checklist Results</div>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width:15%;">Category</th>
-                    <th style="width:50%;">Item</th>
-                    <th style="width:15%;text-align:center;">Result</th>
-                    <th style="width:20%;text-align:center;">Severity</th>
-                </tr>
-            </thead>
-            <tbody>${checklistRows || '<tr><td colspan="4" style="padding:20px;text-align:center;color:#9ca3af;">No checklist data available</td></tr>'}</tbody>
-        </table>
-    </div>
-
-    <div class="section">
-        <div class="section-title">Signatures</div>
-        <div class="signatures">
-            ${driverSig}
-            ${inspectorSig}
+    <div class="footer-box">
+        <div class="section-title" style="margin-top: 0; font-size: 14px;">Authorization</div>
+        <div class="row">
+            <div class="col">
+                <div class="label">Inspector Name</div><div class="value">${data.inspectorName || data.inspector_name || '_________________'}</div>
+                <div style="margin-top: 15px;" class="label">Inspector Signature</div>
+                <div class="sig-block">${inspectorSig ? `<img src="${inspectorSig}" class="sig-img" />` : ''}</div>
+            </div>
+            <div class="col">
+                <div class="label">Sealer Name</div><div class="value">${data.sealer_name || '_________________'}</div>
+                <div style="margin-top: 15px;" class="label">Sealer Signature</div>
+                <div class="sig-block">${sealerSig ? `<img src="${sealerSig}" class="sig-img" />` : ''}</div>
+            </div>
         </div>
-    </div>
-
-    <div class="footer">
-        SDI Core Inspection System &mdash; Confidential Report &mdash; Generated ${new Date().toLocaleString()}
     </div>
 </body>
 </html>`;
+}
 
+// --- PUBLIC API ---
+
+export function generateInspectionPDF(item) {
+    const html = createInspectionHTML(item);
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.write(html);
+        printWindow.document.close();
+    }
+}
+
+export function generateQualityPDF(item) {
+    const html = createQualityHTML(item);
     const printWindow = window.open('', '_blank');
     if (printWindow) {
         printWindow.document.write(html);
@@ -183,25 +285,21 @@ export function generateInspectionPDF(item) {
 }
 
 /**
- * Generate a bulk PDF export of all inspection records (summary table).
+ * Bulk export — summary table of all inspection records.
  */
 export function generateBulkExportPDF(historyData) {
     const rows = historyData.map((item) => {
-        const cfg = statusConfig[item.status] || statusConfig.OPERATIONAL;
+        const color = getStatusColor(item.status);
         return `
-            <tr>
-                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:11px;">${item.timestamp}</td>
-                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:11px;font-weight:600;">${item.truck}</td>
-                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:11px;">${item.driver}</td>
-                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:11px;">${item.transporter || '—'}</td>
-                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:11px;">${item.depot || '—'}</td>
-                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:11px;">${item.inspectorName || '—'}</td>
-                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center;">
-                    <span style="
-                        display:inline-block;padding:2px 8px;border-radius:4px;
-                        font-size:9px;font-weight:700;color:#fff;
-                        background:${cfg.color};
-                    ">${item.status}</span>
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding:8px 10px;font-size:11px;">${formatDate(item.created_at || item.timestamp)}</td>
+                <td style="padding:8px 10px;font-size:11px;font-weight:600;">${item.truck || item.truck_number || '—'}</td>
+                <td style="padding:8px 10px;font-size:11px;">${item.driver || item.driver_name || '—'}</td>
+                <td style="padding:8px 10px;font-size:11px;">${item.transporter || '—'}</td>
+                <td style="padding:8px 10px;font-size:11px;">${item.depot || '—'}</td>
+                <td style="padding:8px 10px;font-size:11px;">${item.inspectorName || item.inspector_name || '—'}</td>
+                <td style="padding:8px 10px;text-align:center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;background:${color};">${item.status}</span>
                 </td>
             </tr>`;
     }).join('');
@@ -216,28 +314,26 @@ export function generateBulkExportPDF(historyData) {
     <meta charset="UTF-8">
     <title>SDI Core — Full Inspection Log</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', -apple-system, sans-serif; color: #111827; background: #fff; }
+        body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #111827; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 4px solid #1f2937; padding-bottom: 20px; }
+        .company-name { font-size: 26px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .report-title { font-size: 14px; letter-spacing: 2px; color: #6b7280; text-transform: uppercase; margin-top: 5px; }
+        .summary { display: flex; gap: 20px; margin-bottom: 30px; }
+        .summary .box { flex: 1; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; text-align: center; }
+        .summary .box .num { font-size: 28px; font-weight: 800; }
+        .summary .box .desc { font-size: 10px; color: #6b7280; text-transform: uppercase; margin-top: 2px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background-color: #1f2937; color: #ffffff; padding: 10px; text-align: left; text-transform: uppercase; font-size: 9px; letter-spacing: 1px; }
+        .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 20px; }
         @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .no-print { display: none !important; }
             @page { margin: 0.5in; size: A4 landscape; }
         }
-        .header { background: #0f172a; color: #fff; padding: 24px 28px; display: flex; justify-content: space-between; align-items: center; }
-        .header .brand { font-size: 20px; font-weight: 800; letter-spacing: 1px; }
-        .header .brand span { color: #2dd4bf; }
-        .summary { display: flex; gap: 20px; padding: 16px 28px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
-        .summary .box { padding: 12px 20px; border-radius: 6px; text-align: center; flex: 1; }
-        .summary .box .num { font-size: 28px; font-weight: 800; }
-        .summary .box .desc { font-size: 10px; color: #6b7280; text-transform: uppercase; margin-top: 2px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 4px; }
-        th { text-align: left; padding: 8px 10px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; border-bottom: 2px solid #e5e7eb; background: #f9fafb; }
-        .footer { text-align: center; padding: 12px; font-size: 10px; color: #9ca3af; border-top: 1px solid #e5e7eb; margin-top: 16px; }
-        .download-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #0f172a; padding: 12px 24px; display: flex; justify-content: center; gap: 12px; z-index: 100; }
+        .download-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #1f2937; padding: 12px 24px; display: flex; justify-content: center; gap: 12px; z-index: 100; }
         .download-bar button { padding: 10px 28px; border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; }
-        .btn-dl { background: #2dd4bf; color: #0f172a; }
-        .btn-close { background: #334155; color: #e2e8f0; }
+        .btn-dl { background: #22c55e; color: #fff; }
+        .btn-close { background: #374151; color: #e2e8f0; }
     </style>
 </head>
 <body>
@@ -247,41 +343,33 @@ export function generateBulkExportPDF(historyData) {
     </div>
 
     <div class="header">
-        <div>
-            <div class="brand">SDI <span>CORE</span></div>
-            <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Inspection Log Export</div>
-        </div>
-        <div style="text-align:right;font-size:11px;color:#94a3b8;">
-            <div>${historyData.length} Records</div>
-            <div>Generated ${new Date().toLocaleString()}</div>
-        </div>
+        <div class="company-name">JP TRUSTEES LIMITED</div>
+        <div class="report-title">Inspection Log Export &mdash; ${historyData.length} Records</div>
     </div>
 
     <div class="summary">
-        <div class="box" style="background:#f0fdf4;"><div class="num" style="color:#16a34a;">${totalPass}</div><div class="desc">Operational</div></div>
-        <div class="box" style="background:#fefce8;"><div class="num" style="color:#ca8a04;">${totalMonitor}</div><div class="desc">Monitor</div></div>
-        <div class="box" style="background:#fef2f2;"><div class="num" style="color:#dc2626;">${totalFail}</div><div class="desc">Grounded</div></div>
-        <div class="box" style="background:#f1f5f9;"><div class="num">${historyData.length}</div><div class="desc">Total</div></div>
+        <div class="box"><div class="num" style="color:#16a34a;">${totalPass}</div><div class="desc">Operational</div></div>
+        <div class="box"><div class="num" style="color:#ca8a04;">${totalMonitor}</div><div class="desc">Monitor</div></div>
+        <div class="box"><div class="num" style="color:#dc2626;">${totalFail}</div><div class="desc">Grounded</div></div>
+        <div class="box"><div class="num">${historyData.length}</div><div class="desc">Total</div></div>
     </div>
 
-    <div style="padding:16px 28px 60px;">
-        <table>
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Truck</th>
-                    <th>Driver</th>
-                    <th>Transporter</th>
-                    <th>Depot</th>
-                    <th>Inspector</th>
-                    <th style="text-align:center;">Status</th>
-                </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-        </table>
-    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Truck</th>
+                <th>Driver</th>
+                <th>Transporter</th>
+                <th>Depot</th>
+                <th>Inspector</th>
+                <th style="text-align:center;">Status</th>
+            </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+    </table>
 
-    <div class="footer">SDI Core Inspection System &mdash; Confidential &mdash; ${new Date().toLocaleString()}</div>
+    <div class="footer">Generated via Smart Digital Inspection (SDI) Core &mdash; ${new Date().toLocaleString()}</div>
 </body>
 </html>`;
 
