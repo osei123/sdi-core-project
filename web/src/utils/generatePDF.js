@@ -149,7 +149,7 @@ function createInspectionHTML(data) {
         </div>
     </div>
 
-    <div class="footer">Generated via Smart Digital Inspection (SDI) Core</div>
+    <div class="footer">Generated via Smart Digital Inspection (SDI) Core &bull; Validated by ${data.inspectorName || data.inspector_name || 'Inspector'}</div>
 </body>
 </html>`;
 }
