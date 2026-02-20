@@ -1,65 +1,113 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Droplets, Save } from 'lucide-react';
+import { ArrowLeft, FileText, Plus } from 'lucide-react';
 import { useToast } from '../components/Toast';
+import { generateQualityPDF } from '../utils/generatePDF';
+
+const COMPANIES = ['JP TRUSTEES LTD', 'MOREFUEL LTD'];
+
+const INITIAL_COMPARTMENTS = Array.from({ length: 6 }, (_, i) => ({
+    id: i + 1,
+    litres: '',
+    cert: '',
+    prod: '',
+}));
 
 const QualityDataPage = ({ appLogic }) => {
     const navigate = useNavigate();
     const toast = useToast();
     const [isSaving, setIsSaving] = useState(false);
+    const fileInputRef = useRef(null);
 
-    const [form, setForm] = useState({
-        truckNumber: '',
-        transporter: '',
-        product: 'PMS',
-        depot: '',
-        compartments: [
-            { number: 1, density: '', temperature: '', volume: '' },
-            { number: 2, density: '', temperature: '', volume: '' },
-            { number: 3, density: '', temperature: '', volume: '' },
-        ],
-        observation: '',
+    // 0. Company Information
+    const [companyName, setCompanyName] = useState('JP TRUSTEES LTD');
+
+    // 1. Documentation (waybill images)
+    const [documents, setDocuments] = useState([]);
+
+    // 2. Truck Details
+    const [truckNo, setTruckNo] = useState('');
+    const [product, setProduct] = useState('');
+    const [depot, setDepot] = useState('');
+
+    // 3. Compartment Levels
+    const [compartments, setCompartments] = useState(INITIAL_COMPARTMENTS);
+
+    // 4. Quality Parameters
+    const [qualityParams, setQualityParams] = useState({
+        density: '',
+        diffComp: '',
+        temp: '',
+        additive: '',
+        water: '',
+        color: '',
     });
 
-    const handleFormChange = (field, value) => {
-        setForm((prev) => ({ ...prev, [field]: value }));
-    };
+    // 5. Sign-Off
+    const [inspectorName, setInspectorName] = useState(appLogic?.profile?.full_name || '');
+    const [sealerName, setSealerName] = useState('');
 
-    const handleCompartmentChange = (index, field, value) => {
-        setForm((prev) => {
-            const comps = [...prev.compartments];
-            comps[index] = { ...comps[index], [field]: value };
-            return { ...prev, compartments: comps };
+    // --- Handlers ---
+
+    const updateCompartment = (index, field, value) => {
+        setCompartments((prev) => {
+            const copy = [...prev];
+            copy[index] = { ...copy[index], [field]: value };
+            return copy;
         });
     };
 
-    const addCompartment = () => {
-        setForm((prev) => ({
-            ...prev,
-            compartments: [
-                ...prev.compartments,
-                { number: prev.compartments.length + 1, density: '', temperature: '', volume: '' },
-            ],
-        }));
+    const updateQuality = (field, value) => {
+        setQualityParams((prev) => ({ ...prev, [field]: value }));
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!form.truckNumber) {
+    const handleAddDocument = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (e) => {
+        const files = Array.from(e.target.files || []);
+        files.forEach((file) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                setDocuments((prev) => [...prev, { name: file.name, data: reader.result }]);
+            };
+            reader.readAsDataURL(file);
+        });
+        e.target.value = '';
+    };
+
+    const removeDocument = (idx) => {
+        setDocuments((prev) => prev.filter((_, i) => i !== idx));
+    };
+
+    // --- Submit ---
+
+    const handleSubmit = async () => {
+        if (!truckNo.trim()) {
             toast('Truck number is required', 'error');
             return;
         }
+
         setIsSaving(true);
         try {
-            await appLogic.saveQualityReport({
-                truck_number: form.truckNumber,
-                transporter: form.transporter,
-                product: form.product,
-                depot: form.depot,
-                compartments: form.compartments,
-                observation: form.observation,
-            });
-            toast('Quality data saved!', 'success');
+            const reportData = {
+                company_name: companyName,
+                truck_number: truckNo,
+                product,
+                depot,
+                compartments,
+                quality_params: qualityParams,
+                inspector_name: inspectorName,
+                sealer_name: sealerName,
+            };
+
+            await appLogic.saveQualityReport(reportData);
+
+            // Generate PDF immediately
+            generateQualityPDF(reportData);
+
+            toast('Quality data saved & PDF generated!', 'success');
             navigate('/home');
         } catch (err) {
             toast(err.message || 'Failed to save', 'error');
@@ -69,151 +117,231 @@ const QualityDataPage = ({ appLogic }) => {
     };
 
     return (
-        <div>
-            <div className="page-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <button className="modal-close" onClick={() => navigate('/home')}>
-                        <ArrowLeft size={18} />
-                    </button>
-                    <div className="title-area">
-                        <p className="subtitle">QUALITY ASSURANCE</p>
-                        <h1>Quality Data</h1>
-                    </div>
-                </div>
+        <div className="quality-page">
+            {/* Header */}
+            <div className="quality-page-header">
+                <button className="quality-back-btn" onClick={() => navigate('/home')} aria-label="Go back">
+                    <ArrowLeft size={20} />
+                </button>
+                <h1 className="quality-page-title">QUALITY DATA</h1>
             </div>
 
-            <div className="quality-form">
-                <form onSubmit={handleSubmit}>
-                    <div className="form-group">
-                        <label>Truck Number *</label>
-                        <div className="form-input">
-                            <input
-                                type="text"
-                                placeholder="e.g. GR-1234-21"
-                                value={form.truckNumber}
-                                onChange={(e) => handleFormChange('truckNumber', e.target.value.toUpperCase())}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="form-group">
-                        <label>Transporter</label>
-                        <div className="form-input">
-                            <input
-                                type="text"
-                                placeholder="Transport company"
-                                value={form.transporter}
-                                onChange={(e) => handleFormChange('transporter', e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: 12 }}>
-                        <div className="form-group" style={{ flex: 1 }}>
-                            <label>Product</label>
-                            <div className="form-input">
-                                <select
-                                    value={form.product}
-                                    onChange={(e) => handleFormChange('product', e.target.value)}
-                                    style={{ background: 'none', border: 'none', color: 'var(--text-primary)', flex: 1 }}
-                                >
-                                    <option value="PMS">PMS</option>
-                                    <option value="AGO">AGO</option>
-                                    <option value="DPK">DPK</option>
-                                    <option value="LPG">LPG</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div className="form-group" style={{ flex: 1 }}>
-                            <label>Depot</label>
-                            <div className="form-input">
-                                <input
-                                    type="text"
-                                    placeholder="Depot name"
-                                    value={form.depot}
-                                    onChange={(e) => handleFormChange('depot', e.target.value)}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="section-title" style={{ marginTop: 24 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span>COMPARTMENTS</span>
-                            <button
-                                type="button"
-                                className="btn-ghost"
-                                onClick={addCompartment}
-                                style={{ fontSize: 11 }}
-                            >
-                                + Add Compartment
-                            </button>
-                        </div>
-                    </div>
-
-                    {form.compartments.map((comp, idx) => (
-                        <div key={idx} className="compartment-card">
-                            <div className="compartment-header">
-                                <span className="compartment-title">
-                                    <Droplets size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-                                    Compartment {comp.number}
-                                </span>
-                            </div>
-                            <div style={{ display: 'flex', gap: 10 }}>
-                                <div className="form-group" style={{ flex: 1 }}>
-                                    <label>Density</label>
-                                    <div className="form-input" style={{ height: 42 }}>
-                                        <input
-                                            type="number"
-                                            step="0.001"
-                                            placeholder="kg/m³"
-                                            value={comp.density}
-                                            onChange={(e) => handleCompartmentChange(idx, 'density', e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="form-group" style={{ flex: 1 }}>
-                                    <label>Temp (°C)</label>
-                                    <div className="form-input" style={{ height: 42 }}>
-                                        <input
-                                            type="number"
-                                            step="0.1"
-                                            placeholder="°C"
-                                            value={comp.temperature}
-                                            onChange={(e) => handleCompartmentChange(idx, 'temperature', e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="form-group" style={{ flex: 1 }}>
-                                    <label>Volume (L)</label>
-                                    <div className="form-input" style={{ height: 42 }}>
-                                        <input
-                                            type="number"
-                                            placeholder="Litres"
-                                            value={comp.volume}
-                                            onChange={(e) => handleCompartmentChange(idx, 'volume', e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-
-                    <div className="form-group" style={{ marginTop: 16 }}>
-                        <label>Observations</label>
-                        <textarea
-                            className="defect-textarea"
-                            placeholder="Any observations or notes..."
-                            value={form.observation}
-                            onChange={(e) => handleFormChange('observation', e.target.value)}
-                            rows={3}
+            <div className="quality-sections">
+                {/* Section 0: Company Information */}
+                <section className="quality-section">
+                    <h2 className="quality-section-title">0. Company Information</h2>
+                    <p className="quality-section-desc">Select or Type Company Name for PDF Header</p>
+                    <div className="quality-input-wrapper">
+                        <input
+                            type="text"
+                            className="quality-input"
+                            value={companyName}
+                            onChange={(e) => setCompanyName(e.target.value.toUpperCase())}
+                            placeholder="Company name"
                         />
                     </div>
+                    <div className="quality-company-chips">
+                        {COMPANIES.map((c) => (
+                            <button
+                                key={c}
+                                type="button"
+                                className={`quality-chip ${companyName === c ? 'active' : ''}`}
+                                onClick={() => setCompanyName(c)}
+                            >
+                                {c}
+                            </button>
+                        ))}
+                    </div>
+                </section>
 
-                    <button type="submit" className="btn-primary" disabled={isSaving} style={{ marginTop: 12 }}>
-                        {isSaving ? <div className="spinner" /> : <><Save size={18} /> SAVE QUALITY DATA</>}
+                {/* Section 1: Documentation */}
+                <section className="quality-section">
+                    <h2 className="quality-section-title">1. Documentation</h2>
+                    <p className="quality-section-desc">Scan Waybills or Tickets (Will appear on Page 1, 2... of PDF)</p>
+                    <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        ref={fileInputRef}
+                        className="quality-file-hidden"
+                        onChange={handleFileChange}
+                    />
+                    {documents.length > 0 && (
+                        <div className="quality-doc-list">
+                            {documents.map((doc, idx) => (
+                                <div key={idx} className="quality-doc-item">
+                                    <FileText size={14} />
+                                    <span>{doc.name}</span>
+                                    <button type="button" className="quality-doc-remove" onClick={() => removeDocument(idx)}>✕</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <button type="button" className="quality-add-doc-btn" onClick={handleAddDocument}>
+                        <Plus size={16} /> Add Document
                     </button>
-                </form>
+                </section>
+
+                {/* Section 2: Truck Details */}
+                <section className="quality-section">
+                    <h2 className="quality-section-title">2. Truck Details</h2>
+                    <div className="quality-field">
+                        <label className="quality-label">Truck No</label>
+                        <input
+                            type="text"
+                            className="quality-input"
+                            value={truckNo}
+                            onChange={(e) => setTruckNo(e.target.value.toUpperCase())}
+                            placeholder="e.g. GT351722"
+                        />
+                    </div>
+                    <div className="quality-field">
+                        <label className="quality-label">Product</label>
+                        <input
+                            type="text"
+                            className="quality-input"
+                            value={product}
+                            onChange={(e) => setProduct(e.target.value)}
+                            placeholder="e.g. PMS, AGO"
+                        />
+                    </div>
+                    <div className="quality-field">
+                        <label className="quality-label">Depot</label>
+                        <input
+                            type="text"
+                            className="quality-input"
+                            value={depot}
+                            onChange={(e) => setDepot(e.target.value)}
+                            placeholder="e.g. Bost Kumasi"
+                        />
+                    </div>
+                </section>
+
+                {/* Section 3: Compartment Levels */}
+                <section className="quality-section">
+                    <h2 className="quality-section-title">3. Compartment Levels</h2>
+                    <div className="quality-comp-table">
+                        <div className="quality-comp-header">
+                            <span className="quality-comp-col no">No.</span>
+                            <span className="quality-comp-col">Litres</span>
+                            <span className="quality-comp-col">Cert</span>
+                            <span className="quality-comp-col">Prod</span>
+                        </div>
+                        {compartments.map((comp, idx) => (
+                            <div key={comp.id} className="quality-comp-row">
+                                <span className="quality-comp-col no quality-comp-num">{comp.id}</span>
+                                <div className="quality-comp-col">
+                                    <input
+                                        type="text"
+                                        className="quality-comp-input"
+                                        value={comp.litres}
+                                        onChange={(e) => updateCompartment(idx, 'litres', e.target.value)}
+                                    />
+                                </div>
+                                <div className="quality-comp-col">
+                                    <input
+                                        type="text"
+                                        className="quality-comp-input"
+                                        value={comp.cert}
+                                        onChange={(e) => updateCompartment(idx, 'cert', e.target.value)}
+                                    />
+                                </div>
+                                <div className="quality-comp-col">
+                                    <input
+                                        type="text"
+                                        className="quality-comp-input"
+                                        value={comp.prod}
+                                        onChange={(e) => updateCompartment(idx, 'prod', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* Section 4: Quality Parameters */}
+                <section className="quality-section">
+                    <h2 className="quality-section-title">4. Quality Parameters</h2>
+                    <div className="quality-params-grid">
+                        <div className="quality-field">
+                            <label className="quality-label">Density</label>
+                            <input type="text" className="quality-input" value={qualityParams.density}
+                                onChange={(e) => updateQuality('density', e.target.value)} />
+                        </div>
+                        <div className="quality-field">
+                            <label className="quality-label">Diff Comp Lvl</label>
+                            <input type="text" className="quality-input" value={qualityParams.diffComp}
+                                onChange={(e) => updateQuality('diffComp', e.target.value)} />
+                        </div>
+                        <div className="quality-field">
+                            <label className="quality-label">Temperature</label>
+                            <input type="text" className="quality-input" value={qualityParams.temp}
+                                onChange={(e) => updateQuality('temp', e.target.value)} />
+                        </div>
+                        <div className="quality-field">
+                            <label className="quality-label">Additive</label>
+                            <input type="text" className="quality-input" value={qualityParams.additive}
+                                onChange={(e) => updateQuality('additive', e.target.value)} />
+                        </div>
+                        <div className="quality-field">
+                            <label className="quality-label">Water Status</label>
+                            <input type="text" className="quality-input" value={qualityParams.water}
+                                onChange={(e) => updateQuality('water', e.target.value)} />
+                        </div>
+                        <div className="quality-field">
+                            <label className="quality-label">Product Color</label>
+                            <input type="text" className="quality-input" value={qualityParams.color}
+                                onChange={(e) => updateQuality('color', e.target.value)} />
+                        </div>
+                    </div>
+                </section>
+
+                {/* Section 5: Sign-Off */}
+                <section className="quality-section">
+                    <h2 className="quality-section-title">5. Sign-Off</h2>
+                    <div className="quality-field">
+                        <label className="quality-label">Inspector's Name:</label>
+                        <input
+                            type="text"
+                            className="quality-input"
+                            value={inspectorName}
+                            onChange={(e) => setInspectorName(e.target.value)}
+                            placeholder="Inspector full name"
+                        />
+                    </div>
+                    <div className="quality-field">
+                        <label className="quality-label">Inspector Signature:</label>
+                        <div className="quality-sig-placeholder">
+                            Tap to Sign (Inspector)
+                        </div>
+                    </div>
+                    <div className="quality-field">
+                        <label className="quality-label">Sealer's Name:</label>
+                        <input
+                            type="text"
+                            className="quality-input"
+                            value={sealerName}
+                            onChange={(e) => setSealerName(e.target.value)}
+                            placeholder="Sealer full name"
+                        />
+                    </div>
+                    <div className="quality-field">
+                        <label className="quality-label">Sealer Signature:</label>
+                        <div className="quality-sig-placeholder">
+                            Tap to Sign (Sealer)
+                        </div>
+                    </div>
+                </section>
+
+                {/* Generate PDF Button */}
+                <button
+                    type="button"
+                    className="quality-generate-btn"
+                    onClick={handleSubmit}
+                    disabled={isSaving}
+                >
+                    {isSaving ? <div className="spinner" /> : 'GENERATE PDF'}
+                </button>
             </div>
         </div>
     );
