@@ -80,6 +80,7 @@ function renderTable() {
   }
 
   tbody.innerHTML = `
+    <div class="table-scroll-wrapper">
     <table class="data-table">
       <thead>
         <tr>
@@ -112,6 +113,7 @@ function renderTable() {
         `).join('')}
       </tbody>
     </table>
+    </div>
   `;
 
   // View handlers

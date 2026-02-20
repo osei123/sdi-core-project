@@ -139,20 +139,37 @@ function renderApp() {
       </aside>
       <main class="main-content">
         <header class="topbar">
-          <h1 class="topbar-title" id="page-title">${pageTitles[currentPage]}</h1>
-          <div class="topbar-actions">
-            <button class="btn-ghost" id="mobile-menu-btn" style="display:none;">☰ Menu</button>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">☰</button>
+            <h1 class="topbar-title" id="page-title">${pageTitles[currentPage]}</h1>
           </div>
+          <div class="topbar-actions"></div>
         </header>
         <div class="content-area" id="content-area"></div>
       </main>
+      <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
     </div>
   `;
 
   // Nav click handlers
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+
+  const closeSidebar = () => {
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('active');
+  };
+
+  document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+    backdrop.classList.toggle('active');
+  });
+  backdrop.addEventListener('click', closeSidebar);
+
   document.querySelectorAll('.nav-item[data-page]').forEach(btn => {
     btn.addEventListener('click', () => {
       currentPage = btn.dataset.page;
+      closeSidebar();
       renderApp();
     });
   });
