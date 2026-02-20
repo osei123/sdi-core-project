@@ -1,4 +1,5 @@
 import { supabase } from '../supabase.js';
+import { downloadPDF } from '../utils/pdfGenerator.js';
 
 let allReports = [];
 
@@ -127,6 +128,7 @@ function renderTable() {
             <td>
               <div class="table-actions">
                 <button class="action-btn" data-view="${r.id}">👁 View</button>
+                <button class="action-btn" data-pdf="${r.id}" title="Download PDF">📄 PDF</button>
                 <button class="action-btn danger" data-delete="${r.id}">🗑</button>
               </div>
             </td>
@@ -140,6 +142,13 @@ function renderTable() {
     btn.addEventListener('click', () => {
       const report = allReports.find(r => r.id === btn.dataset.view);
       if (report) showReportDetail(report);
+    });
+  });
+
+  tbody.querySelectorAll('[data-pdf]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const report = allReports.find(r => r.id === btn.dataset.pdf);
+      if (report) downloadPDF('quality', report);
     });
   });
 
@@ -223,7 +232,10 @@ function showReportDetail(report) {
     <div class="modal-content" style="max-width: 800px; width: 90%;">
       <div class="modal-header">
         <h3>Quality Data Report</h3>
-        <button class="modal-close" id="modal-close-btn">✕</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="action-btn" id="modal-pdf-btn" style="background:var(--accent-primary);color:#fff;padding:8px 16px;border-radius:6px;font-weight:600;font-size:12px;">📄 Download PDF</button>
+          <button class="modal-close" id="modal-close-btn">✕</button>
+        </div>
       </div>
       <div class="modal-body">
         <div class="inspection-meta-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--glass-border);">
@@ -269,6 +281,7 @@ function showReportDetail(report) {
   document.body.appendChild(overlay);
   const close = () => overlay.remove();
   overlay.querySelector('#modal-close-btn').addEventListener('click', close);
+  overlay.querySelector('#modal-pdf-btn').addEventListener('click', () => downloadPDF('quality', report));
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 }
 
