@@ -70,7 +70,11 @@ const SignupPage = ({ appLogic }) => {
         }
         setIsLoading(true);
         try {
-            await appLogic.verifyOtp(form.email, code);
+            await appLogic.verifyOtp(form.email, code, {
+                role: form.role,
+                fullName: form.fullName,
+                username: form.username,
+            });
             toast('Account verified! Redirecting...', 'success');
             setTimeout(() => navigate('/home'), 1000);
         } catch (err) {

@@ -128,8 +128,8 @@ function renderApp() {
           <div class="user-info">
             <div class="user-avatar">${getInitials(currentProfile?.full_name)}</div>
             <div class="user-details">
-              <div class="name">${currentProfile?.full_name || currentUser?.email}</div>
-              <div class="role">Manager</div>
+              <div class="name">${currentProfile?.username || currentProfile?.full_name || currentUser?.email}</div>
+              <div class="role">${currentProfile?.role === 'manager' ? 'Manager' : 'Inspector'}</div>
             </div>
           </div>
           <button class="nav-item" id="logout-btn">

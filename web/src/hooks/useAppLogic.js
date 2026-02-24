@@ -134,26 +134,32 @@ export const useAppLogic = () => {
             email,
             password,
             options: {
-                data: { full_name: fullName },
+                data: { full_name: fullName, username, role: role || 'inspector' },
             },
         });
         if (error) throw error;
-        if (data.user) {
-            await supabase
-                .from('profiles')
-                .update({ role: role || 'inspector', full_name: fullName, username })
-                .eq('id', data.user.id);
-        }
         return data;
     };
 
-    const verifyOtp = async (email, otp) => {
+    const verifyOtp = async (email, otp, profileData = {}) => {
         const { data, error } = await supabase.auth.verifyOtp({
             email,
             token: otp,
             type: 'signup',
         });
         if (error) throw error;
+        // Now that the session is active, update the profile
+        if (data.user) {
+            const { role, fullName, username } = profileData;
+            await supabase
+                .from('profiles')
+                .update({
+                    role: role || 'inspector',
+                    full_name: fullName,
+                    username,
+                })
+                .eq('id', data.user.id);
+        }
         return data;
     };
 
