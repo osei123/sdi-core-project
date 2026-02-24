@@ -227,8 +227,10 @@ export const useAppLogic = () => {
     // ─── Quality report methods ───
     const saveQualityReport = async (reportData) => {
         if (!session) return;
+        // Strip client-only fields not in the DB schema
+        const { documents, ...dbData } = reportData;
         const { error } = await supabase.from('quality_reports').insert({
-            ...reportData,
+            ...dbData,
             inspector_id: session.user.id,
             inspector_name: profile?.full_name || 'Inspector',
         });
