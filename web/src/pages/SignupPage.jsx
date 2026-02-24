@@ -13,7 +13,7 @@ const SignupPage = ({ appLogic }) => {
         role: 'inspector',
     });
     const [showPw, setShowPw] = useState(false);
-    const [otp, setOtp] = useState(['', '', '', '', '', '']);
+    const [otp, setOtp] = useState(['', '', '', '', '', '', '', '']);
     const [isLoading, setIsLoading] = useState(false);
     const otpRefs = useRef([]);
     const navigate = useNavigate();
@@ -50,7 +50,7 @@ const SignupPage = ({ appLogic }) => {
         const newOtp = [...otp];
         newOtp[index] = value;
         setOtp(newOtp);
-        if (value && index < 5) {
+        if (value && index < 7) {
             otpRefs.current[index + 1]?.focus();
         }
     };
@@ -64,7 +64,7 @@ const SignupPage = ({ appLogic }) => {
     const handleVerify = async (e) => {
         e.preventDefault();
         const code = otp.join('');
-        if (code.length < 6) {
+        if (code.length < 8) {
             toast('Please enter the full verification code', 'error');
             return;
         }
@@ -89,7 +89,7 @@ const SignupPage = ({ appLogic }) => {
                             <Mail size={32} color="#99f6e4" />
                         </div>
                         <h1>Verify Email</h1>
-                        <p className="subtitle">Enter the 6-digit code sent to {form.email}</p>
+                        <p className="subtitle">Enter the 8-digit code sent to {form.email}</p>
                     </div>
 
                     <form onSubmit={handleVerify}>
