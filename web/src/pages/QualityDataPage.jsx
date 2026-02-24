@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, Plus } from 'lucide-react';
+import { ArrowLeft, FileText, Plus, X, Eraser, Check } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { generateQualityPDF } from '../utils/generatePDF';
 
@@ -13,11 +13,153 @@ const INITIAL_COMPARTMENTS = Array.from({ length: 6 }, (_, i) => ({
     prod: '',
 }));
 
+// ─── Signature Pad Modal ───
+const SignatureModal = ({ title, onConfirm, onClose }) => {
+    const canvasRef = useRef(null);
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [hasDrawn, setHasDrawn] = useState(false);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        // Set canvas actual pixel size
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * 2;
+        canvas.height = rect.height * 2;
+        ctx.scale(2, 2);
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#000';
+        // Draw baseline
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(20, rect.height - 30);
+        ctx.lineTo(rect.width - 20, rect.height - 30);
+        ctx.strokeStyle = '#ccc';
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.strokeStyle = '#000';
+    }, []);
+
+    const getPos = (e) => {
+        const canvas = canvasRef.current;
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches?.[0];
+        const clientX = touch ? touch.clientX : e.clientX;
+        const clientY = touch ? touch.clientY : e.clientY;
+        return { x: clientX - rect.left, y: clientY - rect.top };
+    };
+
+    const startDraw = (e) => {
+        e.preventDefault();
+        setIsDrawing(true);
+        setHasDrawn(true);
+        const ctx = canvasRef.current.getContext('2d');
+        const { x, y } = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+    };
+
+    const draw = (e) => {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const ctx = canvasRef.current.getContext('2d');
+        const { x, y } = getPos(e);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+    };
+
+    const endDraw = () => setIsDrawing(false);
+
+    const clearCanvas = () => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const rect = canvas.getBoundingClientRect();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Redraw baseline
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(20, rect.height - 30);
+        ctx.lineTo(rect.width - 20, rect.height - 30);
+        ctx.strokeStyle = '#ccc';
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.strokeStyle = '#000';
+        setHasDrawn(false);
+    };
+
+    const confirmSig = () => {
+        if (!hasDrawn) return;
+        const dataUrl = canvasRef.current.toDataURL('image/png');
+        onConfirm(dataUrl);
+    };
+
+    return (
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
+            <div className="modal-content" style={{ maxWidth: 480, padding: 0 }}>
+                <div className="modal-header" style={{ padding: '16px 20px' }}>
+                    <h2 style={{ fontSize: 16 }}>{title}</h2>
+                    <button className="modal-close" onClick={onClose}><X size={18} /></button>
+                </div>
+                <div style={{ padding: '0 20px 20px' }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>
+                        Draw your signature below using your finger or mouse
+                    </p>
+                    <canvas
+                        ref={canvasRef}
+                        style={{
+                            width: '100%',
+                            height: 200,
+                            background: '#fff',
+                            borderRadius: 8,
+                            border: '2px solid var(--border)',
+                            cursor: 'crosshair',
+                            touchAction: 'none',
+                        }}
+                        onMouseDown={startDraw}
+                        onMouseMove={draw}
+                        onMouseUp={endDraw}
+                        onMouseLeave={endDraw}
+                        onTouchStart={startDraw}
+                        onTouchMove={draw}
+                        onTouchEnd={endDraw}
+                    />
+                    <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                        <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={clearCanvas}
+                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                        >
+                            <Eraser size={16} /> Clear
+                        </button>
+                        <button
+                            type="button"
+                            className="btn-primary"
+                            onClick={confirmSig}
+                            disabled={!hasDrawn}
+                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: hasDrawn ? 1 : 0.5 }}
+                        >
+                            <Check size={16} /> Confirm
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ─── Main Page ───
 const QualityDataPage = ({ appLogic }) => {
     const navigate = useNavigate();
     const toast = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef(null);
+
+    // Signature modal state
+    const [sigModal, setSigModal] = useState(null); // 'inspector' | 'sealer' | null
 
     // 0. Company Information
     const [companyName, setCompanyName] = useState('JP TRUSTEES LTD');
@@ -46,6 +188,8 @@ const QualityDataPage = ({ appLogic }) => {
     // 5. Sign-Off
     const [inspectorName, setInspectorName] = useState(appLogic?.profile?.full_name || '');
     const [sealerName, setSealerName] = useState('');
+    const [inspectorSig, setInspectorSig] = useState(null);
+    const [sealerSig, setSealerSig] = useState(null);
 
     // --- Handlers ---
 
@@ -81,11 +225,26 @@ const QualityDataPage = ({ appLogic }) => {
         setDocuments((prev) => prev.filter((_, i) => i !== idx));
     };
 
+    // Signature confirm
+    const handleSigConfirm = (dataUrl) => {
+        if (sigModal === 'inspector') setInspectorSig(dataUrl);
+        if (sigModal === 'sealer') setSealerSig(dataUrl);
+        setSigModal(null);
+    };
+
     // --- Submit ---
 
     const handleSubmit = async () => {
         if (!truckNo.trim()) {
             toast('Truck number is required', 'error');
+            return;
+        }
+        if (!inspectorSig) {
+            toast('Inspector signature is required', 'error');
+            return;
+        }
+        if (!sealerSig) {
+            toast('Sealer signature is required', 'error');
             return;
         }
 
@@ -100,6 +259,9 @@ const QualityDataPage = ({ appLogic }) => {
                 quality_params: qualityParams,
                 inspector_name: inspectorName,
                 sealer_name: sealerName,
+                inspector_signature: inspectorSig,
+                sealer_signature: sealerSig,
+                documents,
             };
 
             await appLogic.saveQualityReport(reportData);
@@ -118,6 +280,15 @@ const QualityDataPage = ({ appLogic }) => {
 
     return (
         <div className="quality-page">
+            {/* Signature Modal */}
+            {sigModal && (
+                <SignatureModal
+                    title={sigModal === 'inspector' ? 'Inspector Signature' : 'Sealer Signature'}
+                    onConfirm={handleSigConfirm}
+                    onClose={() => setSigModal(null)}
+                />
+            )}
+
             {/* Header */}
             <div className="quality-page-header">
                 <button className="quality-back-btn" onClick={() => navigate('/home')} aria-label="Go back">
@@ -170,7 +341,11 @@ const QualityDataPage = ({ appLogic }) => {
                         <div className="quality-doc-list">
                             {documents.map((doc, idx) => (
                                 <div key={idx} className="quality-doc-item">
-                                    <FileText size={14} />
+                                    <img
+                                        src={doc.data}
+                                        alt={doc.name}
+                                        style={{ width: 40, height: 40, borderRadius: 4, objectFit: 'cover', border: '1px solid var(--border)' }}
+                                    />
                                     <span>{doc.name}</span>
                                     <button type="button" className="quality-doc-remove" onClick={() => removeDocument(idx)}>✕</button>
                                 </div>
@@ -310,10 +485,27 @@ const QualityDataPage = ({ appLogic }) => {
                         />
                     </div>
                     <div className="quality-field">
-                        <label className="quality-label">Inspector Signature:</label>
-                        <div className="quality-sig-placeholder">
-                            Tap to Sign (Inspector)
-                        </div>
+                        <label className="quality-label">Inspector Signature: *</label>
+                        {inspectorSig ? (
+                            <div className="quality-sig-preview">
+                                <img src={inspectorSig} alt="Inspector signature" />
+                                <button
+                                    type="button"
+                                    className="quality-sig-clear"
+                                    onClick={() => setInspectorSig(null)}
+                                >
+                                    Re-sign
+                                </button>
+                            </div>
+                        ) : (
+                            <div
+                                className="quality-sig-placeholder"
+                                onClick={() => setSigModal('inspector')}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                ✍ Tap to Sign (Inspector)
+                            </div>
+                        )}
                     </div>
                     <div className="quality-field">
                         <label className="quality-label">Sealer's Name:</label>
@@ -326,10 +518,27 @@ const QualityDataPage = ({ appLogic }) => {
                         />
                     </div>
                     <div className="quality-field">
-                        <label className="quality-label">Sealer Signature:</label>
-                        <div className="quality-sig-placeholder">
-                            Tap to Sign (Sealer)
-                        </div>
+                        <label className="quality-label">Sealer Signature: *</label>
+                        {sealerSig ? (
+                            <div className="quality-sig-preview">
+                                <img src={sealerSig} alt="Sealer signature" />
+                                <button
+                                    type="button"
+                                    className="quality-sig-clear"
+                                    onClick={() => setSealerSig(null)}
+                                >
+                                    Re-sign
+                                </button>
+                            </div>
+                        ) : (
+                            <div
+                                className="quality-sig-placeholder"
+                                onClick={() => setSigModal('sealer')}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                ✍ Tap to Sign (Sealer)
+                            </div>
+                        )}
                     </div>
                 </section>
 

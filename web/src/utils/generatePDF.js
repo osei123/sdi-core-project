@@ -167,6 +167,17 @@ function createQualityHTML(data) {
     const inspectorSig = formatImage(data.inspectorSignature || data.inspector_signature);
     const sealerSig = formatImage(data.sealer_signature);
 
+    // Build document image pages (each image = full page)
+    const docs = data.documents || [];
+    const docPages = docs.map((doc, idx) => `
+        <div class="doc-page" style="page-break-after: always; text-align: center; padding: 20px;">
+            <div style="font-size: 12px; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">
+                Document ${idx + 1} of ${docs.length} — ${doc.name || 'Attached Document'}
+            </div>
+            <img src="${doc.data}" style="max-width: 100%; max-height: 90vh; object-fit: contain; border: 1px solid #ddd; border-radius: 4px;" />
+        </div>
+    `).join('');
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -205,6 +216,8 @@ function createQualityHTML(data) {
         <button class="btn-dl" onclick="window.print()">⬇ Download as PDF</button>
         <button class="btn-close" onclick="window.close()">✕ Close Preview</button>
     </div>
+
+    ${docPages}
 
     <div class="header">
         <div>

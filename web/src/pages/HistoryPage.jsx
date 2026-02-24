@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Trash2, Clock, FileText, Calendar, X, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Download, Trash2, Clock, FileText, X, ChevronRight } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../components/Toast';
-import { generateInspectionPDF, generateBulkExportPDF } from '../utils/generatePDF';
+import { generateInspectionPDF, generateQualityPDF, generateBulkExportPDF } from '../utils/generatePDF';
 
 const HistoryPage = ({ appLogic }) => {
     const { colors } = useTheme();
     const navigate = useNavigate();
     const toast = useToast();
     const [showExportModal, setShowExportModal] = useState(false);
+    const [activeTab, setActiveTab] = useState('inspections');
 
-    const data = appLogic.historyData;
+    const inspectionData = appLogic.historyData;
+    const qualityData = appLogic.qualityReports || [];
 
     const getStatusColor = (status) => {
         if (status === 'GROUNDED') return '#dc2626';
@@ -38,7 +40,7 @@ const HistoryPage = ({ appLogic }) => {
 
     const handleExportAll = () => {
         setShowExportModal(false);
-        generateBulkExportPDF(data);
+        generateBulkExportPDF(inspectionData);
     };
 
     return (
@@ -49,68 +51,127 @@ const HistoryPage = ({ appLogic }) => {
                         <ArrowLeft size={18} />
                     </button>
                     <div className="title-area">
-                        <p className="subtitle">INSPECTION LOGS</p>
+                        <p className="subtitle">ACTIVITY LOGS</p>
                         <h1>All Activity</h1>
                     </div>
                 </div>
+                {activeTab === 'inspections' && (
+                    <button
+                        onClick={() => setShowExportModal(true)}
+                        style={{
+                            background: 'rgba(37,99,235,0.1)',
+                            border: '1px solid rgba(37,99,235,0.3)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: 10,
+                            cursor: 'pointer',
+                            color: '#2563eb',
+                        }}
+                    >
+                        <Download size={20} />
+                    </button>
+                )}
+            </div>
+
+            {/* Tab Toggle */}
+            <div className="history-tabs">
                 <button
-                    onClick={() => setShowExportModal(true)}
-                    style={{
-                        background: 'rgba(37,99,235,0.1)',
-                        border: '1px solid rgba(37,99,235,0.3)',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: 10,
-                        cursor: 'pointer',
-                        color: '#2563eb',
-                    }}
+                    className={`history-tab ${activeTab === 'inspections' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('inspections')}
                 >
-                    <Download size={20} />
+                    Inspections ({inspectionData.length})
+                </button>
+                <button
+                    className={`history-tab ${activeTab === 'quality' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('quality')}
+                >
+                    Quality Reports ({qualityData.length})
                 </button>
             </div>
 
             <div style={{ padding: 24 }}>
-                {data.length === 0 ? (
-                    <div className="empty-state">
-                        <Clock size={48} className="icon" />
-                        <p className="text">No inspections recorded yet.</p>
-                    </div>
-                ) : (
-                    data.map((item) => (
-                        <div key={item.id} className="history-item">
-                            <div
-                                className="info"
-                                onClick={() => navigate(`/details/${item.id}`)}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <div className="truck">{item.truck}</div>
-                                <div className="date">{item.timestamp}</div>
-                                <div className="status-text" style={{ color: getStatusColor(item.status) }}>
-                                    {getStatusText(item.status)}
+                {activeTab === 'inspections' ? (
+                    /* ─── Inspections Tab ─── */
+                    inspectionData.length === 0 ? (
+                        <div className="empty-state">
+                            <Clock size={48} className="icon" />
+                            <p className="text">No inspections recorded yet.</p>
+                        </div>
+                    ) : (
+                        inspectionData.map((item) => (
+                            <div key={item.id} className="history-item">
+                                <div
+                                    className="info"
+                                    onClick={() => navigate(`/details/${item.id}`)}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <div className="truck">{item.truck}</div>
+                                    <div className="date">{item.timestamp}</div>
+                                    <div className="status-text" style={{ color: getStatusColor(item.status) }}>
+                                        {getStatusText(item.status)}
+                                    </div>
+                                </div>
+                                <div className="actions">
+                                    <button
+                                        className="action-btn"
+                                        title="Download PDF"
+                                        onClick={(e) => { e.stopPropagation(); generateInspectionPDF(item); }}
+                                    >
+                                        <Download size={16} />
+                                    </button>
+                                    <button
+                                        className="action-btn delete"
+                                        onClick={() => handleDelete(item.id)}
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                    <button
+                                        className="action-btn"
+                                        onClick={() => navigate(`/details/${item.id}`)}
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
                                 </div>
                             </div>
-                            <div className="actions">
-                                <button
-                                    className="action-btn"
-                                    title="Download PDF"
-                                    onClick={(e) => { e.stopPropagation(); generateInspectionPDF(item); }}
-                                >
-                                    <Download size={16} />
-                                </button>
-                                <button
-                                    className="action-btn delete"
-                                    onClick={() => handleDelete(item.id)}
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                                <button
-                                    className="action-btn"
-                                    onClick={() => navigate(`/details/${item.id}`)}
-                                >
-                                    <ChevronRight size={18} />
-                                </button>
-                            </div>
+                        ))
+                    )
+                ) : (
+                    /* ─── Quality Reports Tab ─── */
+                    qualityData.length === 0 ? (
+                        <div className="empty-state">
+                            <FileText size={48} className="icon" />
+                            <p className="text">No quality reports recorded yet.</p>
                         </div>
-                    ))
+                    ) : (
+                        qualityData.map((report) => (
+                            <div key={report.id} className="history-item">
+                                <div className="info">
+                                    <div className="truck">{report.truck_number || 'Unknown'}</div>
+                                    <div className="date">
+                                        {report.created_at ? new Date(report.created_at).toLocaleString() : '—'}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                                        {report.product || '—'} • {report.company_name || '—'}
+                                    </div>
+                                </div>
+                                <div className="actions">
+                                    <button
+                                        className="action-btn"
+                                        title="Download PDF"
+                                        onClick={() => generateQualityPDF(report)}
+                                    >
+                                        <Download size={16} />
+                                    </button>
+                                    <button
+                                        className="action-btn"
+                                        title="View details"
+                                        onClick={() => generateQualityPDF(report)}
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    )
                 )}
             </div>
 
