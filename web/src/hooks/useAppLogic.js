@@ -129,7 +129,7 @@ export const useAppLogic = () => {
         if (error) throw error;
     };
 
-    const signup = async (email, password, fullName, staffId, location, phone) => {
+    const signup = async (email, password, fullName, username, staffId, role) => {
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -138,6 +138,12 @@ export const useAppLogic = () => {
             },
         });
         if (error) throw error;
+        if (data.user) {
+            await supabase
+                .from('profiles')
+                .update({ role: role || 'inspector', full_name: fullName, username, staff_id: staffId })
+                .eq('id', data.user.id);
+        }
         return data;
     };
 

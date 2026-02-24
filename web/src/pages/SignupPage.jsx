@@ -1,17 +1,17 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Mail, Lock, Eye, EyeOff, User, MapPin, Hash, ArrowLeft, UserPlus } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Hash, ArrowLeft, UserPlus, Shield, ClipboardCheck } from 'lucide-react';
 import { useToast } from '../components/Toast';
 
 const SignupPage = ({ appLogic }) => {
     const [step, setStep] = useState(1); // 1 = form, 2 = otp
     const [form, setForm] = useState({
         fullName: '',
+        username: '',
         email: '',
         password: '',
         staffId: '',
-        location: '',
-        phone: '',
+        role: 'inspector',
     });
     const [showPw, setShowPw] = useState(false);
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -26,7 +26,7 @@ const SignupPage = ({ appLogic }) => {
 
     const handleSignup = async (e) => {
         e.preventDefault();
-        if (!form.fullName || !form.email || !form.password) {
+        if (!form.fullName || !form.username || !form.email || !form.password) {
             toast('Please fill in all required fields', 'error');
             return;
         }
@@ -36,7 +36,7 @@ const SignupPage = ({ appLogic }) => {
         }
         setIsLoading(true);
         try {
-            await appLogic.signup(form.email, form.password, form.fullName, form.staffId, form.location, form.phone);
+            await appLogic.signup(form.email, form.password, form.fullName, form.username, form.staffId, form.role);
             toast('Verification code sent to your email', 'success');
             setStep(2);
         } catch (err) {
@@ -128,12 +128,9 @@ const SignupPage = ({ appLogic }) => {
     return (
         <div className="auth-page">
             <div className="auth-card">
-                <div className="logo-area">
-                    <div className="logo-icon">
-                        <UserPlus size={32} color="#99f6e4" />
-                    </div>
-                    <h1>Create Account</h1>
-                    <p className="subtitle">Join SDI Core inspection platform</p>
+                <div className="logo-area" style={{ marginBottom: 24 }}>
+                    <h1 style={{ fontSize: 32, marginBottom: 4 }}>Create Account</h1>
+                    <p className="subtitle">Join the Smart Digital Inspection Core</p>
                 </div>
 
                 <form onSubmit={handleSignup}>
@@ -143,9 +140,35 @@ const SignupPage = ({ appLogic }) => {
                             <User size={18} className="icon" />
                             <input
                                 type="text"
-                                placeholder="Enter your full name"
+                                placeholder="Enter Fullname"
                                 value={form.fullName}
                                 onChange={(e) => handleChange('fullName', e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Username *</label>
+                        <div className="input-wrapper">
+                            <User size={18} className="icon" />
+                            <input
+                                type="text"
+                                placeholder="enter username"
+                                value={form.username}
+                                onChange={(e) => handleChange('username', e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Staff ID (Optional)</label>
+                        <div className="input-wrapper">
+                            <Hash size={18} className="icon" />
+                            <input
+                                type="text"
+                                placeholder="Badge #000"
+                                value={form.staffId}
+                                onChange={(e) => handleChange('staffId', e.target.value)}
                             />
                         </div>
                     </div>
@@ -156,15 +179,16 @@ const SignupPage = ({ appLogic }) => {
                             <Mail size={18} className="icon" />
                             <input
                                 type="email"
-                                placeholder="Enter your email"
+                                placeholder="email@company.com"
                                 value={form.email}
                                 onChange={(e) => handleChange('email', e.target.value)}
+                                autoComplete="email"
                             />
                         </div>
                     </div>
 
                     <div className="form-group">
-                        <label>Password *</label>
+                        <label>Set Password *</label>
                         <div className="input-wrapper">
                             <Lock size={18} className="icon" />
                             <input
@@ -172,6 +196,7 @@ const SignupPage = ({ appLogic }) => {
                                 placeholder="Min 6 characters"
                                 value={form.password}
                                 onChange={(e) => handleChange('password', e.target.value)}
+                                autoComplete="new-password"
                             />
                             <button type="button" className="toggle-btn" onClick={() => setShowPw(!showPw)}>
                                 {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -180,33 +205,36 @@ const SignupPage = ({ appLogic }) => {
                     </div>
 
                     <div className="form-group">
-                        <label>Staff ID</label>
-                        <div className="input-wrapper">
-                            <Hash size={18} className="icon" />
-                            <input
-                                type="text"
-                                placeholder="Enter staff ID (optional)"
-                                value={form.staffId}
-                                onChange={(e) => handleChange('staffId', e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="form-group">
-                        <label>Location</label>
-                        <div className="input-wrapper">
-                            <MapPin size={18} className="icon" />
-                            <input
-                                type="text"
-                                placeholder="Your location (optional)"
-                                value={form.location}
-                                onChange={(e) => handleChange('location', e.target.value)}
-                            />
+                        <label>Select Account Type</label>
+                        <div className="role-selector">
+                            <button
+                                type="button"
+                                className={`role-btn ${form.role === 'inspector' ? 'active' : ''}`}
+                                onClick={() => handleChange('role', 'inspector')}
+                            >
+                                <ClipboardCheck size={18} />
+                                Inspector
+                            </button>
+                            <button
+                                type="button"
+                                className={`role-btn ${form.role === 'manager' ? 'active' : ''}`}
+                                onClick={() => handleChange('role', 'manager')}
+                            >
+                                <Shield size={18} />
+                                Manager
+                            </button>
                         </div>
                     </div>
 
                     <button type="submit" className="btn-primary" disabled={isLoading} style={{ marginTop: 8 }}>
-                        {isLoading ? <div className="spinner" /> : 'CREATE ACCOUNT'}
+                        {isLoading ? (
+                            <div className="spinner" />
+                        ) : (
+                            <>
+                                <UserPlus size={18} />
+                                REGISTER ACCOUNT
+                            </>
+                        )}
                     </button>
                 </form>
 

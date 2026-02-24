@@ -371,6 +371,41 @@ ol {
   border-color: #0f766e;
 }
 
+/* ─── Role Selector (Account Type) ─── */
+.role-selector {
+  display: flex;
+  gap: 10px;
+}
+
+.role-btn {
+  flex: 1;
+  height: 52px;
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.role-btn:hover {
+  border-color: rgba(15, 118, 110, 0.5);
+  color: var(--text-secondary);
+}
+
+.role-btn.active {
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.25), rgba(13, 78, 74, 0.3));
+  border-color: #0f766e;
+  color: #99f6e4;
+  box-shadow: 0 0 15px rgba(15, 118, 110, 0.2);
+}
+
 /* ─── Page Header ─── */
 .page-header {
   display: flex;
