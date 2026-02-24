@@ -89,7 +89,11 @@ const AppRoutes = () => {
           } />
           <Route path="/manager" element={
             <ProtectedRoute appLogic={appLogic}>
-              <ManagerDashboard appLogic={appLogic} />
+              {appLogic.role === 'manager' ? (
+                <ManagerDashboard appLogic={appLogic} />
+              ) : (
+                <Navigate to="/home" replace />
+              )}
             </ProtectedRoute>
           } />
           <Route path="/profile" element={
