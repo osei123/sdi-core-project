@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, User, Hash, ArrowLeft, UserPlus, Shield, ClipboardCheck } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Hash, UserPlus, Shield, ClipboardCheck, CheckCircle } from 'lucide-react';
 import { useToast } from '../components/Toast';
 
 const SignupPage = ({ appLogic }) => {
-    const [step, setStep] = useState(1); // 1 = form, 2 = otp
+    const [submitted, setSubmitted] = useState(false);
     const [form, setForm] = useState({
         fullName: '',
         username: '',
@@ -14,9 +14,7 @@ const SignupPage = ({ appLogic }) => {
         role: 'inspector',
     });
     const [showPw, setShowPw] = useState(false);
-    const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [isLoading, setIsLoading] = useState(false);
-    const otpRefs = useRef([]);
     const navigate = useNavigate();
     const toast = useToast();
 
@@ -37,8 +35,7 @@ const SignupPage = ({ appLogic }) => {
         setIsLoading(true);
         try {
             await appLogic.signup(form.email, form.password, form.fullName, form.username, form.staffId, form.role);
-            toast('Verification code sent to your email', 'success');
-            setStep(2);
+            setSubmitted(true);
         } catch (err) {
             toast(err.message || 'Signup failed', 'error');
         } finally {
@@ -46,80 +43,40 @@ const SignupPage = ({ appLogic }) => {
         }
     };
 
-    const handleOtpChange = (index, value) => {
-        if (value.length > 1) value = value[value.length - 1];
-        const newOtp = [...otp];
-        newOtp[index] = value;
-        setOtp(newOtp);
-        if (value && index < 5) {
-            otpRefs.current[index + 1]?.focus();
-        }
-    };
-
-    const handleOtpKeyDown = (index, e) => {
-        if (e.key === 'Backspace' && !otp[index] && index > 0) {
-            otpRefs.current[index - 1]?.focus();
-        }
-    };
-
-    const handleVerify = async (e) => {
-        e.preventDefault();
-        const code = otp.join('');
-        if (code.length < 6) {
-            toast('Please enter the full verification code', 'error');
-            return;
-        }
-        setIsLoading(true);
-        try {
-            await appLogic.verifyOtp(form.email, code);
-            toast('Account verified! Redirecting...', 'success');
-            setTimeout(() => navigate('/home'), 1000);
-        } catch (err) {
-            toast(err.message || 'Verification failed', 'error');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    if (step === 2) {
+    if (submitted) {
         return (
             <div className="auth-page">
-                <div className="auth-card">
-                    <div className="logo-area">
-                        <div className="logo-icon">
-                            <Mail size={32} color="#99f6e4" />
-                        </div>
-                        <h1>Verify Email</h1>
-                        <p className="subtitle">Enter the 6-digit code sent to {form.email}</p>
+                <div className="auth-card" style={{ textAlign: 'center' }}>
+                    <div style={{
+                        width: 72,
+                        height: 72,
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.05))',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 20px',
+                        border: '1px solid rgba(34,197,94,0.3)',
+                    }}>
+                        <CheckCircle size={36} color="#22c55e" />
                     </div>
-
-                    <form onSubmit={handleVerify}>
-                        <div className="otp-inputs">
-                            {otp.map((digit, i) => (
-                                <input
-                                    key={i}
-                                    ref={(el) => (otpRefs.current[i] = el)}
-                                    type="text"
-                                    maxLength={1}
-                                    value={digit}
-                                    onChange={(e) => handleOtpChange(i, e.target.value)}
-                                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                                    autoFocus={i === 0}
-                                />
-                            ))}
-                        </div>
-
-                        <button type="submit" className="btn-primary" disabled={isLoading}>
-                            {isLoading ? <div className="spinner" /> : 'VERIFY ACCOUNT'}
-                        </button>
-                    </form>
-
-                    <div className="auth-footer">
-                        <button onClick={() => setStep(1)}>
-                            <ArrowLeft size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                            Back to signup
-                        </button>
-                    </div>
+                    <h1 style={{ fontSize: 24, marginBottom: 8 }}>Check Your Email</h1>
+                    <p className="subtitle" style={{ marginBottom: 8, lineHeight: 1.6 }}>
+                        We've sent a confirmation link to
+                    </p>
+                    <p style={{ color: '#99f6e4', fontWeight: 600, fontSize: 15, marginBottom: 20 }}>
+                        {form.email}
+                    </p>
+                    <p className="subtitle" style={{ lineHeight: 1.6, marginBottom: 28 }}>
+                        Click the link in your email to verify your account, then come back and sign in.
+                    </p>
+                    <button
+                        className="btn-primary"
+                        onClick={() => navigate('/')}
+                    >
+                        <Mail size={18} />
+                        GO TO LOGIN
+                    </button>
                 </div>
             </div>
         );
