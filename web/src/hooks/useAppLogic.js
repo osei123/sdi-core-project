@@ -129,7 +129,7 @@ export const useAppLogic = () => {
         if (error) throw error;
     };
 
-    const signup = async (email, password, fullName, username, staffId, role) => {
+    const signup = async (email, password, fullName, username, role) => {
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -141,7 +141,7 @@ export const useAppLogic = () => {
         if (data.user) {
             await supabase
                 .from('profiles')
-                .update({ role: role || 'inspector', full_name: fullName, username, staff_id: staffId })
+                .update({ role: role || 'inspector', full_name: fullName, username })
                 .eq('id', data.user.id);
         }
         return data;
