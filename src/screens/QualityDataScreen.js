@@ -149,7 +149,7 @@ const QualityDataScreen = ({ onBack, onSave }) => {
     }, []);
 
     // --- 1. DATA STATE ---
-    const [companyName, setCompanyName] = useState('JP TRUSTEES LTD');
+    const [companyName, setCompanyName] = useState('MORE FUEL LIMITED');
     const [truckDetails, setTruckDetails] = useState({
         truckNo: '',
         product: '',
@@ -265,12 +265,7 @@ const QualityDataScreen = ({ onBack, onSave }) => {
 
     // --- 5. PDF GENERATOR (PDF always uses light theme for printing) ---
     const getThemeColor = () => {
-        if (companyName === 'MOREFUEL LTD') {
-            return '#E31E24';
-        } else if (companyName === 'JP TRUSTEES LTD') {
-            return '#7CB342';
-        }
-        return '#ED7D31';
+        return '#E31E24';
     };
 
     const generateHTML = () => {
@@ -446,19 +441,11 @@ const QualityDataScreen = ({ onBack, onSave }) => {
                     />
                     <View style={{ flexDirection: 'row', marginTop: 10 }}>
                         <TouchableOpacity
-                            style={[styles.chip, { borderColor: colors.tealMid }, companyName === 'JP TRUSTEES LTD' && { backgroundColor: colors.tealMid }]}
-                            onPress={() => setCompanyName('JP TRUSTEES LTD')}
+                            style={[styles.chip, { borderColor: colors.tealMid }, companyName === 'MORE FUEL LIMITED' && { backgroundColor: colors.tealMid }]}
+                            onPress={() => setCompanyName('MORE FUEL LIMITED')}
                         >
-                            <Text style={[styles.chipText, { color: colors.tealMid }, companyName === 'JP TRUSTEES LTD' && { color: '#fff' }]}>
-                                JP TRUSTEES LTD
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.chip, { borderColor: colors.tealMid }, companyName === 'MOREFUEL LTD' && { backgroundColor: colors.tealMid }]}
-                            onPress={() => setCompanyName('MOREFUEL LTD')}
-                        >
-                            <Text style={[styles.chipText, { color: colors.tealMid }, companyName === 'MOREFUEL LTD' && { color: '#fff' }]}>
-                                MOREFUEL LTD
+                            <Text style={[styles.chipText, { color: colors.tealMid }, companyName === 'MORE FUEL LIMITED' && { color: '#fff' }]}>
+                                MORE FUEL LIMITED
                             </Text>
                         </TouchableOpacity>
                     </View>

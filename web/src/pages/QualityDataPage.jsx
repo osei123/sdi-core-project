@@ -4,7 +4,7 @@ import { ArrowLeft, FileText, Plus, X, Eraser, Check } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { generateQualityPDF } from '../utils/generatePDF';
 
-const COMPANIES = ['JP TRUSTEES LTD', 'MOREFUEL LTD'];
+const COMPANIES = ['MORE FUEL LIMITED'];
 
 const INITIAL_COMPARTMENTS = Array.from({ length: 6 }, (_, i) => ({
     id: i + 1,
@@ -162,7 +162,7 @@ const QualityDataPage = ({ appLogic }) => {
     const [sigModal, setSigModal] = useState(null); // 'inspector' | 'sealer' | null
 
     // 0. Company Information
-    const [companyName, setCompanyName] = useState('JP TRUSTEES LTD');
+    const [companyName, setCompanyName] = useState('MORE FUEL LIMITED');
 
     // 1. Documentation (waybill images)
     const [documents, setDocuments] = useState([]);

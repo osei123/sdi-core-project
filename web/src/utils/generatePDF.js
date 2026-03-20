@@ -108,7 +108,7 @@ function createInspectionHTML(data) {
     </div>
 
     <div class="header">
-        <div class="company-name">JP TRUSTEES LIMITED</div>
+        <div class="company-name">MORE FUEL LIMITED</div>
         <div class="report-title">Truck Inspection Report</div>
     </div>
 
@@ -157,7 +157,7 @@ function createInspectionHTML(data) {
 // --- QUALITY REPORT (matches mobile template) ---
 
 function createQualityHTML(data) {
-    const themeColor = (data.company_name || '').toUpperCase().includes('MOREFUEL') ? '#E31E24' : '#7CB342';
+    const themeColor = '#E31E24';
     const randomNum = Math.floor(Math.random() * 99999) + 1;
     const invoiceNumber = String(randomNum).padStart(5, '0');
 
@@ -356,7 +356,7 @@ export function generateBulkExportPDF(historyData) {
     </div>
 
     <div class="header">
-        <div class="company-name">JP TRUSTEES LIMITED</div>
+        <div class="company-name">MORE FUEL LIMITED</div>
         <div class="report-title">Inspection Log Export &mdash; ${historyData.length} Records</div>
     </div>
 

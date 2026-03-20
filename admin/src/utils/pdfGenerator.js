@@ -112,7 +112,7 @@ const createInspectionHTML = (data) => {
     </div>
 
     <div class="header">
-      <div class="company-name">JP TRUSTEES LIMITED</div>
+      <div class="company-name">MORE FUEL LIMITED</div>
       <div class="report-title">Truck Inspection Report</div>
     </div>
 
@@ -161,7 +161,7 @@ const createInspectionHTML = (data) => {
 // --- QUALITY REPORT TEMPLATE ---
 
 const createQualityHTML = (data) => {
-  const themeColor = data.company_name === 'MOREFUEL LTD' ? '#E31E24' : '#7CB342';
+  const themeColor = '#E31E24';
   const randomNum = Math.floor(Math.random() * 99999) + 1;
   const invoiceNumber = String(randomNum).padStart(5, '0');
 

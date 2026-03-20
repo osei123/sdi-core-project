@@ -612,13 +612,8 @@ export const useAppLogic = () => {
     // --- QUALITY REPORT PDF EXPORT ---
     const handleExportQualityPDF = async (report) => {
         try {
-            // Company-based theme color (matching inspector's style)
-            let themeColor = '#ED7D31';
-            if (report.company_name === 'MOREFUEL LTD') {
-                themeColor = '#E31E24';
-            } else if (report.company_name === 'JP TRUSTEES LTD') {
-                themeColor = '#7CB342';
-            }
+            // Company-based theme color (MORE FUEL LIMITED)
+            const themeColor = '#E31E24';
 
             const headerTitle = `QUALITY DATA - ${(report.company_name || 'UNKNOWN').toUpperCase()}`;
             const randomNum = Math.floor(Math.random() * 99999) + 1;

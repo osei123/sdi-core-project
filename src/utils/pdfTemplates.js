@@ -88,7 +88,7 @@ export const createSingleReportHTML = (item, logoBase64) => {
       ? `<img src="${logoBase64}" style="width: 100px; height: auto; margin-bottom: 15px;" />`
       : ''
     }
-          <div class="company-name">JP TRUSTEES LIMITED</div>
+          <div class="company-name">MORE FUEL LIMITED</div>
           <div class="report-title">Truck Inspection Report</div>
         </div>
 
